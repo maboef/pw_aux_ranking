@@ -44,10 +44,8 @@ def train_auxiliary_chemprop_PCM(train, valid, model_path: str,  **kwargs):
     lt_mask = np.expand_dims(np.array(dataset['fixed_relation'].str.contains('<').values), axis=1)
     gt_mask = np.expand_dims(np.array(dataset['fixed_relation'].str.contains('>').values), axis=1)
     if 'rank_split' in dataset:
-        # aux_mask = np.expand_dims(np.array(dataset['rank_split']), axis=1)
-        # print(f'aux_mask unique: {np.unique(aux_mask, return_counts=True)}')
-        aux_mask = dataset[['rank_split', 'scaled_pchembl_value', 'scaled_percent_inhibition']].to_numpy()
-        print(f'aux_mask unique: {aux_mask.shape}')
+        aux_mask = np.expand_dims(np.array(dataset['rank_split']), axis=1)
+        print(f'aux_mask unique: {np.unique(aux_mask, return_counts=True)}')
     else:
         print('no rank split column found')
         aux_mask = np.expand_dims(np.ones(len(ys)), axis=1)

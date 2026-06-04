@@ -191,6 +191,72 @@ class MSEPlusPairwiseRankingLoss(metrics.ChempropMetric):
             scores = logits_arc[:, 1] - logits_arc[:, 0]
         else:
             scores = logits_arc.view(-1)
+            
+        # --- BROADCASTED PAIRWISE DIFFERENCES ---
+        # score_diffs[i, j] = Score_i - Score_j (Shape: [Batch, Batch])
+        score_diffs = scores.unsqueeze(1) - scores.unsqueeze(0)
+        
+        # --- UNPACK HIERARCHICAL TARGETS ---
+        # rank_split shape: [Batch, 3] -> x, y, z
+        x = rank_split[:, 0]
+        y = rank_split[:, 1]
+        z = rank_split[:, 2]
+        
+        # Check availability (masking out NaNs)
+        # Note: If your NaNs are represented differently (like -1), change torch.isnan
+        has_y = ~torch.isnan(y)
+        has_z = ~torch.isnan(z)
+        
+        # --- BROADCASTED VALUE DIFFERENCES ---
+        x_diffs = x.unsqueeze(1) - x.unsqueeze(0)
+        y_diffs = y.unsqueeze(1) - y.unsqueeze(0)
+        z_diffs = z.unsqueeze(1) - z.unsqueeze(0)
+        
+        # --- PAIRWISE AVAILABILITY MATRICES [Batch, Batch] ---
+        both_have_y = has_y.unsqueeze(1) & has_y.unsqueeze(0)
+        both_have_z = has_z.unsqueeze(1) & has_z.unsqueeze(0)
+        one_y_one_z = (has_y.unsqueeze(1) & has_z.unsqueeze(0)) | (has_z.unsqueeze(1) & has_y.unsqueeze(0))
+        
+        # --- COMPUTE HIERARCHICAL DIFFERENCES ---
+        # Rule 1 & 4: If both have Y, use Y (Precedence over Z)
+        # Rule 2: If both have Z (and not both Y), use Z
+        # Rule 3: If one has Y and one has Z, use X
+        
+        # Initialize an effective rank difference matrix with zeros
+        effective_rank_diffs = torch.zeros_like(score_diffs)
+        
+        # Apply conditions hierarchically
+        effective_rank_diffs = torch.where(both_have_y, y_diffs, effective_rank_diffs)
+        effective_rank_diffs = torch.where(both_have_z & ~both_have_y, z_diffs, effective_rank_diffs)
+        effective_rank_diffs = torch.where(one_y_one_z, x_diffs, effective_rank_diffs)
+        
+        # --- DEFINE VALID PAIRS ---
+        # Create a master validity mask ensuring a valid relationship was actually evaluated
+        valid_comparison_mask = both_have_y | (both_have_z & ~both_have_y) | one_y_one_z
+        
+        # Pairs where sample i is significantly ranked HIGHER than sample j
+        pair_mask = (effective_rank_diffs > self.rank_dist) & valid_comparison_mask
+        
+        if not pair_mask.any():
+            return torch.tensor(0.0, device=logits_arc.device, requires_grad=True)
+            
+        # Extract valid differences
+        valid_diffs = score_diffs[pair_mask]
+        
+        # --- CROSS ENTROPY LOSS CALCULATION ---
+        logits_pair = torch.stack([torch.zeros_like(valid_diffs), valid_diffs], dim=1)
+        targets_ranking = torch.tensor([0.0, 1.0], device=valid_diffs.device).expand(len(valid_diffs), 2)
+        
+        loss = self.ce_loss(logits_pair, targets_ranking)
+        return loss
+
+    '''
+    def compute_generalized_pair_loss(self, logits_arc, targets, rank_split):
+        if logits_arc.dim() > 1 and logits_arc.size(-1) > 1:
+            # Logistic difference for binary classification logits
+            scores = logits_arc[:, 1] - logits_arc[:, 0]
+        else:
+            scores = logits_arc.view(-1)
         
         # --- BROADCASTED PAIRWISE DIFFERENCES ---
         # Create matrices of shape [Batch, Batch]
@@ -220,7 +286,7 @@ class MSEPlusPairwiseRankingLoss(metrics.ChempropMetric):
         
         loss = self.ce_loss(logits_pair, targets_ranking)
         return loss
-
+    '''
 
     def _calc_unreduced_loss(self, preds, targets, logits_mat, logits_arc, 
                              targets_mat, weights=None, lt_mask=None, gt_mask=None,
@@ -231,7 +297,7 @@ class MSEPlusPairwiseRankingLoss(metrics.ChempropMetric):
         mask:        (batch, tasks) or None
         lt_mask:     (batch, tasks) - less than mask
         gt_mask:     (batch, tasks) - greater than mask
-        rank_split:  (batch,) tensor of 0 or 1 marking which group the sample belongs to
+        rank_split:  (batch,) tensor on which the ranking is done, can be categorical or continuous
         """
         mask = targets.isfinite() # all samples that have target value NaN, here the mask will be generated to account for these in loss calculation
         targets = targets.nan_to_num(nan=0.0) # set missing targets to 0.0 as chemprop MSE loss will give error on missing values despite the masking of those values
