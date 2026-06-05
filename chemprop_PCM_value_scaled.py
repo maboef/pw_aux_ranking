@@ -113,19 +113,19 @@ def run_model(
     valid['value'] = (valid['value'] - valid['mean']) / valid['std']
     with mlflow.start_run() as run:
         params = {
-        'hidden_size': 256, 
+        'hidden_size': 512, 
         'depth': 3,
-        'dropout': 0.01,
+        'dropout': 0.05,
         'ffn_num_layers': 3,
         'activation': 'LeakyReLU',
         'aggregation': 'mean',
-        'max_lr': 0.0025,
+        'max_lr': 0.001,
         'epochs': epochs,
         'bias': False,
-        'batch_size': 2048,
+        'batch_size': 512,
         'extension': extension,
         'seed': seed,
-        'rank_dist': 0.1,}
+        'rank_dist': 0.4,}
         model_path = model_path + run.data.tags.get("mlflow.runName")
         mlflow.log_params(params)
         trainer, model = train_auxiliary_chemprop_PCM(train, valid, model_path, **params)
@@ -135,8 +135,8 @@ def run_model(
 if __name__ == '__main__':
     mlflow.set_tracking_uri("http://localhost:5000")
     mlflow.set_experiment("PCM_models_saifudeen")
-    trainer, model, test_, valid, train = run_model(data_path='/home/boefma/auxiliary_ranking/data/PCM_luukkonnen_', protein_descriptor='CMF_Zscales', extension='saifudeen_ext_double_rank', seed=100) # no_saifudeen_ext)
-    # trainer, model, test_, valid, train = run_model(data_path='/home/boefma/auxiliary_ranking/data/PCM_luukkonnen_', protein_descriptor='CMF_Zscales', extension='saifudeen_ext_continuous_rank', seed=1001)
-    # trainer, model, test_, valid, train = run_model(data_path='/home/boefma/auxiliary_ranking/data/PCM_luukkonnen_', protein_descriptor='CMF_Zscales', extension='saifudeen_ext_continuous_rank', seed=10011)
-    # trainer, model, test_, valid, train = run_model(data_path='/home/boefma/auxiliary_ranking/data/PCM_luukkonnen_', protein_descriptor='CMF_Zscales', extension='saifudeen_ext_continuous_rank', seed=20002)
-    # trainer, model, test_, valid, train = run_model(data_path='/home/boefma/auxiliary_ranking/data/PCM_luukkonnen_', protein_descriptor='CMF_Zscales', extension='saifudeen_ext_continuous_rank', seed=100, epochs=2000)
+    trainer, model, test_, valid, train = run_model(data_path='/home/boefma/auxiliary_ranking/data/PCM_luukkonnen_', protein_descriptor='CMF_Zscales', extension='no_saifudeen_ext', seed=100) # no_saifudeen_ext)
+    trainer, model, test_, valid, train = run_model(data_path='/home/boefma/auxiliary_ranking/data/PCM_luukkonnen_', protein_descriptor='CMF_Zscales', extension='no_saifudeen_ext', seed=1001)
+    trainer, model, test_, valid, train = run_model(data_path='/home/boefma/auxiliary_ranking/data/PCM_luukkonnen_', protein_descriptor='CMF_Zscales', extension='no_saifudeen_ext', seed=10011)
+    trainer, model, test_, valid, train = run_model(data_path='/home/boefma/auxiliary_ranking/data/PCM_luukkonnen_', protein_descriptor='CMF_Zscales', extension='no_saifudeen_ext', seed=20002)
+    trainer, model, test_, valid, train = run_model(data_path='/home/boefma/auxiliary_ranking/data/PCM_luukkonnen_', protein_descriptor='CMF_Zscales', extension='no_saifudeen_ext', seed=10, epochs=2000)

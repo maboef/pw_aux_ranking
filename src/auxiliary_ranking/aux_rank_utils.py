@@ -82,9 +82,8 @@ class MoleculeDatapoint(_DatapointMixin, _MoleculeDatapointMixin):
             self.E_f[np.isnan(self.E_f)] = NAN_TOKEN
         if self.V_d is not None:
             self.V_d[np.isnan(self.V_d)] = NAN_TOKEN
-        if self.aux_mask is not None:
-            self.aux_mask[np.isnan(self.aux_mask)] = NAN_TOKEN
-
+        # if self.aux_mask is not None:
+        #     self.aux_mask[np.isnan(self.aux_mask)] = NAN_TOKEN
         super().__post_init__()
 
     def __len__(self) -> int:

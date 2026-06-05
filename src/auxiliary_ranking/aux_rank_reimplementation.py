@@ -195,17 +195,19 @@ class MSEPlusPairwiseRankingLoss(metrics.ChempropMetric):
         # --- BROADCASTED PAIRWISE DIFFERENCES ---
         # score_diffs[i, j] = Score_i - Score_j (Shape: [Batch, Batch])
         score_diffs = scores.unsqueeze(1) - scores.unsqueeze(0)
-        
+
         # --- UNPACK HIERARCHICAL TARGETS ---
         # rank_split shape: [Batch, 3] -> x, y, z
         x = rank_split[:, 0]
         y = rank_split[:, 1]
         z = rank_split[:, 2]
         
-        # Check availability (masking out NaNs)
-        # Note: If your NaNs are represented differently (like -1), change torch.isnan
         has_y = ~torch.isnan(y)
         has_z = ~torch.isnan(z)
+        
+        # print(f'y count {has_y.sum().item()}')
+        # print(f'z count {has_z.sum().item()}')
+
         
         # --- BROADCASTED VALUE DIFFERENCES ---
         x_diffs = x.unsqueeze(1) - x.unsqueeze(0)
@@ -236,7 +238,21 @@ class MSEPlusPairwiseRankingLoss(metrics.ChempropMetric):
         
         # Pairs where sample i is significantly ranked HIGHER than sample j
         pair_mask = (effective_rank_diffs > self.rank_dist) & valid_comparison_mask
+        '''
+        valid_y_count = (both_have_y & pair_mask).sum().item()
+        valid_z_count = ((both_have_z & ~both_have_y) & pair_mask).sum().item()
+        valid_xz_count = (one_y_one_z & pair_mask).sum().item()
+        total_pairs_used = pair_mask.sum().item()
         
+        # Log the actual counts
+        with open('loss_log_.txt', 'a') as f:
+            f.write(
+                f"both_have_y: {valid_y_count}, "
+                f"both_have_z: {valid_z_count}, "
+                f"one_y_one_z: {valid_xz_count}, "
+                f"total_pairs_used: {total_pairs_used}\n"
+            )
+        '''
         if not pair_mask.any():
             return torch.tensor(0.0, device=logits_arc.device, requires_grad=True)
             
@@ -335,7 +351,7 @@ class CustomMPNN(models.MPNN):
         preds, logits_mat, logits_arc, targets_mat = self.predictor.train_step(Z, targets)
         loss = self.criterion._calc_unreduced_loss(preds, targets, logits_mat, logits_arc, 
                                                    targets_mat, weights, lt_mask, gt_mask, aux_mask)
-
+        
         self.log("train_loss", loss, batch_size=batch_size, prog_bar=True, on_epoch=True)
         return loss
 
@@ -351,8 +367,7 @@ class CustomMPNN(models.MPNN):
         Z = self.fingerprint(bmg, V_d, X_d)
         preds, logits_mat, logits_arc, targets_mat = self.predictor.train_step(Z, targets)
         perf = self.metrics[0](preds, targets, mask, weights, lt_mask, gt_mask)
-        ranked_perf = self.criterion._calc_unreduced_loss(preds, targets, logits_mat, logits_arc, 
-                                                   targets_mat, weights, lt_mask, gt_mask, aux_mask)
+        # ranked_perf = self.criterion._calc_unreduced_loss(preds, targets, logits_mat, logits_arc, targets_mat, weights, lt_mask, gt_mask, aux_mask)
         
         # print(f'perf + ranked perf: {perf + ranked_perf}')
         self.log("val_loss", perf, batch_size=batch_size, prog_bar=True, on_epoch=True)
