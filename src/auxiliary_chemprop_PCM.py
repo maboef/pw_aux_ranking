@@ -6,7 +6,7 @@ import pandas as pd
 
 from chemprop import nn, utils
 from chemprop.data import split_data_by_indices
-from chemprop.featurizers import SimpleMoleculeMolGraphFeaturizer
+from chemprop.featurizers import RDKit2DFeaturizer, SimpleMoleculeMolGraphFeaturizer
 
 
 from lightning import pytorch as pl
@@ -43,20 +43,26 @@ def train_auxiliary_chemprop_PCM(train, valid, model_path: str,  **kwargs):
     prots = dataset.loc[:, 'protein_descriptor'].values
     lt_mask = np.expand_dims(np.array(dataset['fixed_relation'].str.contains('<').values), axis=1)
     gt_mask = np.expand_dims(np.array(dataset['fixed_relation'].str.contains('>').values), axis=1)
-    if 'rank_split' in dataset:
+    if 'rank_split' and 'scaled_pchembl_value' and 'scaled_percent_inhibition' in dataset:
         # aux_mask = np.expand_dims(np.array(dataset['rank_split']), axis=1)
         # print(f'aux_mask unique: {np.unique(aux_mask, return_counts=True)}')
+        aux_mask = dataset[['rank_split', 'scaled_pchembl_value', 'scaled_percent_inhibition']].to_numpy()
+        print(f'aux_mask unique: {aux_mask.shape}')
+    elif 'rank_split' in dataset:
+        dataset['scaled_pchembl_value'] = np.nan
+        dataset['scaled_percent_inhibition'] = np.nan
         aux_mask = dataset[['rank_split', 'scaled_pchembl_value', 'scaled_percent_inhibition']].to_numpy()
         print(f'aux_mask unique: {aux_mask.shape}')
     else:
         print('no rank split column found')
         aux_mask = np.expand_dims(np.ones(len(ys)), axis=1)
     # target_indices = np.array(pd.factorize(dataset['accession'])[0])
-
     mols = [utils.make_mol(smi, keep_h=False, add_h=False) for smi in smis]
     datapoints = [MoleculeDatapoint(mol=mol, y=[float(y)], x_d=prot, lt_mask=lt, gt_mask=gt, aux_mask=aux) for mol, y, prot, lt, gt, aux in zip(mols, ys, prots, lt_mask, gt_mask, aux_mask)] # using the pre-existing weight value for storing and use of target indices as it's anyway passed along all through chemprop to the loss function
     train_data, val_data, test_data = split_data_by_indices([datapoints], *split_indices) # for some reason datapoints needs to be list within list where the chemprop standard datapoints does not
     featurizer = SimpleMoleculeMolGraphFeaturizer()
+    rdkit_featurizer = RDKit2DFeaturizer()
+    # extra_descriptors = np.array([rdkit_featurizer(mol) for mol in mols]
     
     train_dset = CustomMoleculeDataset(train_data[0][0], featurizer)
     val_dset = CustomMoleculeDataset(val_data[0][0], featurizer)
@@ -97,7 +103,6 @@ def train_auxiliary_chemprop_PCM(train, valid, model_path: str,  **kwargs):
         filename="best-{epoch}-val_rmse",
         monitor="val/rmse",
         mode='min')])
-    print(len(val_loader))
     trainer.fit(chemprop_model, train_loader, val_loader)
     torch.save(chemprop_model, 'fully_trained.pt')
     return trainer, chemprop_model
