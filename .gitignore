@@ -6,3 +6,4 @@
 
 .ipynb_checkpoints/
 checkpoints/
+lightning_logs/
