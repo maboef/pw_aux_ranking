@@ -140,7 +140,7 @@ if __name__ == '__main__':
     
     for seed in range(5):
         seed = seed+1
-        trainer, model, test_, valid, train, model_path = run_model(data_path='/home/boefma/auxiliary_ranking/data/PCM_luukkonnen_', protein_descriptor='CMF_Zscales', extension='cluster_split_saifudeen_ext_double_rank', seed=seed) # saifudeen_ext_double_rank)
+        trainer, model, test_, valid, train, model_path = run_model(data_path='/home/boefma/auxiliary_ranking/data/PCM_luukkonnen_', protein_descriptor='CMF_Zscales', extension='cluster_split_no_saifudeen_ext', seed=seed) # saifudeen_ext_double_rank)
         # preds = generate_preds(model_paths_3, scaler_path_ext_cont, test, value_scaler_ext_cont)
     '''
     trainer, model, test_, valid, train = run_model(data_path='/home/boefma/auxiliary_ranking/data/PCM_luukkonnen_', protein_descriptor='CMF_Zscales', extension='cluster_split_saifudeen_ext_double_rank', seed=1001)

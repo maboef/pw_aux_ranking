@@ -9,6 +9,7 @@ from chemprop.data import split_data_by_indices
 from chemprop.featurizers import RDKit2DFeaturizer, SimpleMoleculeMolGraphFeaturizer
 
 
+from lightning.pytorch import seed_everything
 from lightning import pytorch as pl
 from .pl_checkpointer import TorchModelSaver
 from .auxiliary_ranking.aux_rank_reimplementation import CustomMPNN, MultiObjectiveFFN, MSEPlusPairwiseRankingLoss
@@ -31,6 +32,7 @@ def train_auxiliary_chemprop_PCM(train, valid, model_path: str,  **kwargs):
     else:
         with open(model_path) as d: params = json.load(d)
 
+    seed_everything(params['seed'], workers=True)
     batch_size = params['batch_size']
     dataset = pd.concat([train, valid], ignore_index=True)
     
@@ -43,9 +45,8 @@ def train_auxiliary_chemprop_PCM(train, valid, model_path: str,  **kwargs):
     prots = dataset.loc[:, 'protein_descriptor'].values
     lt_mask = np.expand_dims(np.array(dataset['fixed_relation'].str.contains('<').values), axis=1)
     gt_mask = np.expand_dims(np.array(dataset['fixed_relation'].str.contains('>').values), axis=1)
+    
     if 'rank_split' and 'scaled_pchembl_value' and 'scaled_percent_inhibition' in dataset:
-        # aux_mask = np.expand_dims(np.array(dataset['rank_split']), axis=1)
-        # print(f'aux_mask unique: {np.unique(aux_mask, return_counts=True)}')
         aux_mask = dataset[['rank_split', 'scaled_pchembl_value', 'scaled_percent_inhibition']].to_numpy()
         print(f'aux_mask unique: {aux_mask.shape}')
     elif 'rank_split' in dataset:
@@ -56,19 +57,23 @@ def train_auxiliary_chemprop_PCM(train, valid, model_path: str,  **kwargs):
     else:
         print('no rank split column found')
         aux_mask = np.expand_dims(np.ones(len(ys)), axis=1)
-    # target_indices = np.array(pd.factorize(dataset['accession'])[0])
+
+    
     mols = [utils.make_mol(smi, keep_h=False, add_h=False) for smi in smis]
-    datapoints = [MoleculeDatapoint(mol=mol, y=[float(y)], x_d=prot, lt_mask=lt, gt_mask=gt, aux_mask=aux) for mol, y, prot, lt, gt, aux in zip(mols, ys, prots, lt_mask, gt_mask, aux_mask)] # using the pre-existing weight value for storing and use of target indices as it's anyway passed along all through chemprop to the loss function
-    train_data, val_data, test_data = split_data_by_indices([datapoints], *split_indices) # for some reason datapoints needs to be list within list where the chemprop standard datapoints does not
+    datapoints = [MoleculeDatapoint(mol=mol, y=[float(y)], x_d=prot, lt_mask=lt, gt_mask=gt, aux_mask=aux) 
+                  for mol, y, prot, lt, gt, aux in zip(mols, ys, prots, lt_mask, gt_mask, aux_mask)] # using the pre-existing weight value for storing and use of target indices as it's anyway passed along all through chemprop to the loss function
+    train_data, val_data, test_data = split_data_by_indices([datapoints], *split_indices)
     featurizer = SimpleMoleculeMolGraphFeaturizer()
-    rdkit_featurizer = RDKit2DFeaturizer()
+
+    # TO DO: implement Rdkit2DFeaturizer
+    # rdkit_featurizer = RDKit2DFeaturizer()
     # extra_descriptors = np.array([rdkit_featurizer(mol) for mol in mols]
     
     train_dset = CustomMoleculeDataset(train_data[0][0], featurizer)
     val_dset = CustomMoleculeDataset(val_data[0][0], featurizer)
     print(f'length train_dset {len(train_dset)}')
     if 'rank_split' in dataset:
-        train_loader = custom_build_dataloader(train_dset, batch_size=batch_size, shuffle=True, class_balance=False, drop_last=True, seed=10111)
+        train_loader = custom_build_dataloader(train_dset, batch_size=batch_size, shuffle=True, class_balance=False, drop_last=True, seed=params['seed'])
         val_loader = custom_build_dataloader(val_dset, batch_size=batch_size, shuffle=False, class_balance=False)
         print('class balance set to true')
     else:
@@ -80,7 +85,7 @@ def train_auxiliary_chemprop_PCM(train, valid, model_path: str,  **kwargs):
                                activation=params['activation'],
                                bias=params['bias'], # v1 used bias=False in W_i/W_h
                                undirected=False)
-    
+
     ffn_input_dim = mp.output_dim + prots[0].shape[0]
     ffn = MultiObjectiveFFN(input_dim=ffn_input_dim,
                             hidden_dim=params['hidden_size'],
@@ -89,7 +94,7 @@ def train_auxiliary_chemprop_PCM(train, valid, model_path: str,  **kwargs):
                             dropout=params['dropout'],
                             activation=params['activation'],
                             criterion=MSEPlusPairwiseRankingLoss(rank_dist=params['rank_dist']))
-    
+
     if params['aggregation'] == 'mean':
         agg = nn.MeanAggregation()
     if params['aggregation'] == 'sum':
@@ -98,7 +103,8 @@ def train_auxiliary_chemprop_PCM(train, valid, model_path: str,  **kwargs):
     metric_list = [nn.metrics.RMSE()]
     chemprop_model = CustomMPNN(mp, agg, ffn, batch_norm=False, metrics=metric_list, max_lr=params['max_lr'])
     # checkpoint_callback = ModelCheckpoint(model_path, 'best-{epoch}-{val_loss:.2f}', save_top_k=1, monitor="val/rmse", mode='min')
-    trainer = pl.Trainer(logger=True, enable_checkpointing=False, max_epochs=params['epochs'], accelerator='gpu', devices=[2], callbacks=[TorchModelSaver(
+    trainer = pl.Trainer(logger=True, enable_checkpointing=False, max_epochs=params['epochs'], accelerator='gpu', 
+                         devices=[2], deterministic=True, callbacks=[TorchModelSaver(
         dirpath=model_path,
         filename="best-{epoch}-val_rmse",
         monitor="val/rmse",
