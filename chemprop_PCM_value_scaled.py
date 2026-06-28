@@ -113,6 +113,13 @@ def run_model(
     train['value'] = (train['value'] - train['mean']) / train['std']
     valid = valid.merge(scaler_lookup, on='accession', how='left')
     valid['value'] = (valid['value'] - valid['mean']) / valid['std']
+    print(len(train['rank_split'].unique()))
+    if len(train['rank_split'].unique()) <5:
+        categorical_dist = 0
+    elif len(train['rank_split'].unique()) > 5:
+        categorical_dist = 1
+    else:
+        print('number of unique values in rank split other than 3 or 6, check')
     with mlflow.start_run() as run:
         params = {
             'hidden_size': 512, 
@@ -121,13 +128,14 @@ def run_model(
             'ffn_num_layers': 3,
             'activation': 'LeakyReLU',
             'aggregation': 'mean',
-            'max_lr': 0.001,
+            'max_lr': 0.002,
             'epochs': epochs,
             'bias': False,
             'batch_size': 512,
             'extension': extension,
             'seed': seed,
-            'rank_dist': 0.4,}
+            'rank_dist': 0.3,
+            'categorical_dist': categorical_dist}
         model_path = model_path + run.data.tags.get("mlflow.runName")
         mlflow.log_params(params)
         trainer, model = train_auxiliary_chemprop_PCM(train, valid, model_path, **params)
@@ -137,11 +145,11 @@ def run_model(
 if __name__ == '__main__':
     mlflow.set_tracking_uri("http://localhost:5000")
     mlflow.set_experiment("PCM_models_saifudeen")
-    
     for seed in range(5):
         seed = seed+1
-        trainer, model, test_, valid, train, model_path = run_model(data_path='/home/boefma/auxiliary_ranking/data/PCM_luukkonnen_', protein_descriptor='CMF_Zscales', extension='cluster_split_no_saifudeen_ext', seed=seed) # saifudeen_ext_double_rank)
+        trainer, model, test_, valid, train, model_path = run_model(data_path='/home/boefma/auxiliary_ranking/data/PCM_luukkonnen_', protein_descriptor='CMF_Zscales', extension='cluster_split_saifudeen_ext', seed=seed) # saifudeen_ext_double_rank, saifudeen_ext_6_class)
         # preds = generate_preds(model_paths_3, scaler_path_ext_cont, test, value_scaler_ext_cont)
+
     '''
     trainer, model, test_, valid, train = run_model(data_path='/home/boefma/auxiliary_ranking/data/PCM_luukkonnen_', protein_descriptor='CMF_Zscales', extension='cluster_split_saifudeen_ext_double_rank', seed=1001)
     trainer, model, test_, valid, train = run_model(data_path='/home/boefma/auxiliary_ranking/data/PCM_luukkonnen_', protein_descriptor='CMF_Zscales', extension='cluster_split_saifudeen_ext_double_rank', seed=10011)

@@ -145,14 +145,15 @@ class MultiObjectiveFFN(torch.nn.Module, HasHParams):
         return logits_mat, None
 
 class MSEPlusPairwiseRankingLoss(metrics.ChempropMetric):
-    def __init__(self, rank_dist):
+    def __init__(self, rank_dist, categorical_dist):
         super().__init__()
         self.bounded_mse = nn.BoundedMSE()
         self.ce_loss = torch.nn.BCEWithLogitsLoss(reduce='mean')
         self.alias = 'combined_regression_rank_loss'
         self.rank_dist = rank_dist
+        self.categorical_dist = categorical_dist
     
-    def compute_generalized_pair_loss(self, logits_arc, targets, rank_split):
+    def compute_generalized_pair_loss(self, logits_arc, rank_split):
         if logits_arc.dim() > 1 and logits_arc.size(-1) > 1:
             # Logistic difference for binary classification logits
             scores = logits_arc[:, 1] - logits_arc[:, 0]
@@ -174,7 +175,7 @@ class MSEPlusPairwiseRankingLoss(metrics.ChempropMetric):
         x_diffs = x.unsqueeze(1) - x.unsqueeze(0)
         y_diffs = y.unsqueeze(1) - y.unsqueeze(0)
         z_diffs = z.unsqueeze(1) - z.unsqueeze(0)
-        # --- PAIRWISE AVAILABILITY MATRICES ---
+        
         both_have_y = has_y.unsqueeze(1) & has_y.unsqueeze(0)
         both_have_z = has_z.unsqueeze(1) & has_z.unsqueeze(0)
         
@@ -182,10 +183,15 @@ class MSEPlusPairwiseRankingLoss(metrics.ChempropMetric):
         effective_rank_diffs = torch.where(both_have_z, z_diffs, effective_rank_diffs)
         effective_rank_diffs = torch.where(both_have_y, y_diffs, effective_rank_diffs)
         
-        valid_comparison_mask = torch.ones_like(score_diffs, dtype=torch.bool)
-    
-        # Pairs where sample i is significantly ranked HIGHER than sample j
-        pair_mask = (effective_rank_diffs > self.rank_dist) & valid_comparison_mask
+        # Which rank level is actually being used?
+        using_z = both_have_z
+        using_y = both_have_y & ~both_have_z
+        using_x = ~(using_y | using_z)
+        
+        pair_mask = (
+            (using_x & (x_diffs > self.categorical_dist)) |
+            (using_y & (y_diffs > self.rank_dist)) |
+            (using_z & (z_diffs > self.rank_dist)))
         if not pair_mask.any():
             return torch.tensor(0.0, device=logits_arc.device, requires_grad=True)
         
@@ -218,7 +224,7 @@ class MSEPlusPairwiseRankingLoss(metrics.ChempropMetric):
             return mse_loss
         
         if rank_split is not None:
-            pair_loss_ = self.compute_generalized_pair_loss(logits_arc, targets, rank_split)
+            pair_loss_ = self.compute_generalized_pair_loss(logits_arc, rank_split)
             
             if torch.isnan(pair_loss_):
                 print('pair loss produced NaN')
