@@ -93,7 +93,8 @@ def train_auxiliary_chemprop_PCM(train, valid, model_path: str,  **kwargs):
                             n_layers=params['ffn_num_layers'],
                             dropout=params['dropout'],
                             activation=params['activation'],
-                            criterion=MSEPlusPairwiseRankingLoss(rank_dist=params['rank_dist']))
+                            criterion=MSEPlusPairwiseRankingLoss(rank_dist=params['rank_dist'],
+                                                                 categorical_dist=params['categorical_dist']))
 
     if params['aggregation'] == 'mean':
         agg = nn.MeanAggregation()
@@ -104,7 +105,7 @@ def train_auxiliary_chemprop_PCM(train, valid, model_path: str,  **kwargs):
     chemprop_model = CustomMPNN(mp, agg, ffn, batch_norm=False, metrics=metric_list, max_lr=params['max_lr'])
     # checkpoint_callback = ModelCheckpoint(model_path, 'best-{epoch}-{val_loss:.2f}', save_top_k=1, monitor="val/rmse", mode='min')
     trainer = pl.Trainer(logger=True, enable_checkpointing=False, max_epochs=params['epochs'], accelerator='gpu', 
-                         devices=[2], deterministic=True, callbacks=[TorchModelSaver(
+                         devices=[3], deterministic=True, callbacks=[TorchModelSaver(
         dirpath=model_path,
         filename="best-{epoch}-val_rmse",
         monitor="val/rmse",
