@@ -8,21 +8,13 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
-from src.test import generate_preds
 from src.auxiliary_chemprop_PCM import train_auxiliary_chemprop_PCM
 
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 from rdkit.Chem import rdFingerprintGenerator
 
-def compute_fps(data):
-    """Compute Morgan Fingerprints from SMILES."""
-    mfpgen = rdFingerprintGenerator.GetMorganGenerator(radius=3, fpSize=2048)
-    fps = pd.DataFrame(np.array([mfpgen.GetFingerprint(Chem.MolFromSmiles(smiles)) for smiles in tqdm.tqdm(data.SMILES, desc='Computing Morgan Fingerprints from SMILES')]), index=data.index)
 
-    # fps = pd.DataFrame(np.array([AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(smiles), 3, nBits=2048) for smiles in tqdm.tqdm(data.SMILES, desc='Computing Morgan Fingerprints from SMILES')]), index=data.index)
-
-    return fps
 def add_protein_descriptors_and_pad(data, prot_descriptor_path):
     prot_descriptor = pd.read_pickle(prot_descriptor_path)
     # prot_descriptor['protein_descriptor'] = prot_descriptor['protein_descriptor'].apply(list)
@@ -147,8 +139,7 @@ if __name__ == '__main__':
     mlflow.set_experiment("PCM_models_saifudeen")
     for seed in range(5):
         seed = seed+1
-        trainer, model, test_, valid, train, model_path = run_model(data_path='/home/boefma/auxiliary_ranking/data/PCM_luukkonnen_', protein_descriptor='CMF_Zscales', extension='cluster_split_saifudeen_ext', seed=seed) # saifudeen_ext_double_rank, saifudeen_ext_6_class)
-        # preds = generate_preds(model_paths_3, scaler_path_ext_cont, test, value_scaler_ext_cont)
+        trainer, model, test_, valid, train, model_path = run_model(data_path='/home/boefma/auxiliary_ranking/data/PCM_luukkonnen_', protein_descriptor='CMF_Zscales', extension='cluster_split_base', seed=seed) # saifudeen_ext_double_rank, saifudeen_ext_6_class)
 
     '''
     trainer, model, test_, valid, train = run_model(data_path='/home/boefma/auxiliary_ranking/data/PCM_luukkonnen_', protein_descriptor='CMF_Zscales', extension='cluster_split_saifudeen_ext_double_rank', seed=1001)

@@ -100,10 +100,8 @@ def train_auxiliary_chemprop_PCM(train, valid, model_path: str,  **kwargs):
         agg = nn.MeanAggregation()
     if params['aggregation'] == 'sum':
         agg = nn.SumAggregation()
-    # metric_list = [nn.metrics.RMSE()]
     metric_list = [nn.metrics.RMSE()]
     chemprop_model = CustomMPNN(mp, agg, ffn, batch_norm=False, metrics=metric_list, max_lr=params['max_lr'])
-    # checkpoint_callback = ModelCheckpoint(model_path, 'best-{epoch}-{val_loss:.2f}', save_top_k=1, monitor="val/rmse", mode='min')
     trainer = pl.Trainer(logger=True, enable_checkpointing=False, max_epochs=params['epochs'], accelerator='gpu', 
                          devices=[3], deterministic=True, callbacks=[TorchModelSaver(
         dirpath=model_path,
@@ -111,7 +109,6 @@ def train_auxiliary_chemprop_PCM(train, valid, model_path: str,  **kwargs):
         monitor="val/rmse",
         mode='min')])
     trainer.fit(chemprop_model, train_loader, val_loader)
-    torch.save(chemprop_model, 'fully_trained.pt')
     return trainer, chemprop_model
 
 

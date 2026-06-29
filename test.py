@@ -11,27 +11,15 @@ import torch
 from sklearn import metrics
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from rdkit.Chem import rdFingerprintGenerator
 from lightning import pytorch as pl
 from sklearn.preprocessing import StandardScaler
 from chemprop import data, featurizers, models, utils
 
 
-def compute_fps(data):
-    """Compute Morgan Fingerprints from SMILES."""
-    mfpgen = rdFingerprintGenerator.GetMorganGenerator(radius=3, fpSize=2048)
-    fps = pd.DataFrame(np.array([mfpgen.GetFingerprint(Chem.MolFromSmiles(smiles)) for smiles in tqdm.tqdm(data.SMILES, desc='Computing Morgan Fingerprints from SMILES')]), index=data.index)
-    return fps
-
-
 def add_protein_descriptors_and_pad(data, prot_descriptor_path):
     prot_descriptor = pd.read_pickle(prot_descriptor_path)
-    # prot_descriptor['protein_descriptor'] = prot_descriptor['protein_descriptor'].apply(list)
-    # print(prot_descriptor['protein_descriptor'].apply(type))
     data = pd.merge(left=data, right=prot_descriptor, left_on='accession', right_on='target_id', how='left')
     missing = data[data['protein_descriptor'].isna()]
-    # print(f'{len(missing)} datapoints without protein descriptor')
-    # print(f"proteins without descriptor added: {(missing['accession'].unique())}")
     data = data[~data['protein_descriptor'].isna()].reset_index()
     return data
 
@@ -64,8 +52,6 @@ def predict_chemprop_PCM(dataset, model_paths: list):
     all_predictions = []
 
     for i, model_path in enumerate(model_paths):
-        print(f"Running inference on model {i+1}/{len(model_paths)}")
-        
         model = torch.load(model_path, weights_only=False)
         
         with torch.inference_mode():
@@ -155,28 +141,63 @@ if __name__ == '__main__':
     saifudeen_test['value'] = saifudeen_test['pEC50']
     saifudeen_test = saifudeen_test[saifudeen_test['pEC50'].notna()]
     
-    saifudeen_train = pd.read_parquet('/zfsdata/data/boefma/kinase_data/saifudeen_data_pct_inhibition.parquet')
+    saifudeen_train = pd.read_csv('data/PCM_luukkonnen_saifudeen_ext.csv')
+    saifudeen_train = saifudeen_train[saifudeen_train.percent_inhibition.notna()]
 
     base_path = '/home/boefma/auxiliary_ranking/models/'
-    
+
+    '''
     split = 'value_scaled_cluster_split_saifudeen_ext_6_class/'
     models = ['adaptable-eel-165/best-35-val_rmse.pt',
               'whimsical-stork-147/best-62-val_rmse.pt',
               'adaptable-frog-643/best-65-val_rmse.pt',
               'painted-cow-342/best-65-val_rmse.pt',
               'serious-dolphin-492/best-73-val_rmse.pt']
-
+    '''
+    '''
+    split = 'value_scaled_cluster_split_no_saifudeen_ext/'
+    models = ['awesome-fly-63/best-28-val_rmse.pt',
+              'crawling-shark-97/best-78-val_rmse.pt',
+              'debonair-yak-335/best-80-val_rmse.pt',
+              'chill-rat-846/best-66-val_rmse.pt',
+              'receptive-doe-899/best-72-val_rmse.pt']
+    '''
+    '''
+    split = 'value_scaled_cluster_split_saifudeen_ext/'
+    models = ['delightful-jay-401/best-22-val_rmse.pt',
+              'amazing-hen-950/best-84-val_rmse.pt',
+              'rumbling-moose-431/best-97-val_rmse.pt',
+              'wise-carp-664/best-98-val_rmse.pt',
+              'beautiful-frog-293/best-42-val_rmse.pt']
+    '''
+    
+    split = 'value_scaled_cluster_split_base/'
+    models = ['receptive-dog-762/best-45-val_rmse.pt',
+              'unequaled-bear-240/best-75-val_rmse.pt',
+              'enthused-turtle-846/best-44-val_rmse.pt',
+              'awesome-frog-26/best-57-val_rmse.pt']
+    
+    
     for model in models:
         model_path = os.path.join(base_path, split, model)
         prot_scaler_path = os.path.join(base_path, split)
         y_scaler_path = os.path.join(base_path, split, 'target_scaler.csv')
-
+        model_dir = pathlib.Path(model_path).parent
+        
         random_preds = generate_preds([model_path], prot_scaler_path, random_test, y_scaler_path)
-        print(f'RMSE, R2, Spearman R: {get_performance(random_preds.value, random_preds.unscaled_prediction)}')
+        print(f'random split test - RMSE, R2, Spearman R: {get_performance(random_preds.value, random_preds.unscaled_prediction)}')
+        random_preds.to_csv(f'{model_dir}/random_test_preds.csv', index=False)
         
         cluster_preds = generate_preds([model_path], prot_scaler_path, cluster_test, y_scaler_path)
-        print(f'RMSE, R2, Spearman R: {get_performance(cluster_preds.value, cluster_preds.unscaled_prediction)}')
+        print(f'cluster split test - RMSE, R2, Spearman R: {get_performance(cluster_preds.value, cluster_preds.unscaled_prediction)}')
+        cluster_preds.to_csv(f'{model_dir}/cluster_test_preds.csv', index=False)
+
+        saifudeen_test_preds = generate_preds([model_path], prot_scaler_path, saifudeen_test, y_scaler_path)
+        saifudeen_test_preds = saifudeen_test_preds[saifudeen_test_preds['prediction_0'] != saifudeen_test_preds['unscaled_prediction']]
+        print(f'saifudeen test set - RMSE, R2, Spearman R: {get_performance(saifudeen_test_preds.value, saifudeen_test_preds.unscaled_prediction)}')
+        saifudeen_test_preds.to_csv(f'{model_dir}/saifudeen_test_preds.csv', index=False)
+
+        saifudeen_train_preds = generate_preds([model_path], prot_scaler_path, saifudeen_train, y_scaler_path)
+        saifudeen_train_preds = saifudeen_train_preds[saifudeen_train_preds['prediction_0'] != saifudeen_train_preds['unscaled_prediction']]
+        saifudeen_train_preds.to_csv(f'{model_dir}/saifudeen_train_preds.csv', index=False)
         
-        # preds_1 = preds_1[preds_1['prediction_0'] != preds_1['unscaled_prediction']]
-        # luukkonen_preds_1 = generate_preds(model_paths_1, scaler_path_ext_cont, luukkonen_data, value_scaler_ext_cont)
-        # luukkonen_preds_cluster_1 = generate_preds(model_paths_1, scaler_path_ext_cont, luukkonen_data_cluster, value_scaler_ext_cont)
