@@ -3,7 +3,7 @@
 *.png
 *.txt
 *.pt
-
+scaler
 .ipynb_checkpoints/
 checkpoints/
 lightning_logs/
