@@ -232,7 +232,6 @@ class MSEPlusPairwiseRankingLoss(metrics.ChempropMetric):
             else:
                 with open('loss_log_.txt', 'a') as f:
                     f.write(f'mse_loss: {mse_loss.item():.6f}, pair_loss: {pair_loss_.item():.6f}\n')
-                # print(f'mse + pair: {mse_loss + pair_loss_}')
                 return mse_loss + pair_loss_
         else:
             print(f'issue calculating pair loss')
