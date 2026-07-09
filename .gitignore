@@ -1,10 +1,14 @@
-*.ipynb
+\*.ipynb
 *.csv
 *.png
 *.txt
 *.pt
-
+*.gz
+*.pkl
+*.fasta
+/scaler
 .ipynb_checkpoints/
 checkpoints/
 lightning_logs/
 archive/
+__pycache__/
