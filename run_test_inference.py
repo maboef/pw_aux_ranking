@@ -18,7 +18,7 @@ from chemprop import data, featurizers, models, utils
 
 def add_protein_descriptors_and_pad(data, prot_descriptor_path):
     prot_descriptor = pd.read_pickle(prot_descriptor_path)
-    prot_descriptor['accession'] = prot_descriptor['accession'] + '_WT'
+    # prot_descriptor['accession'] = prot_descriptor['accession'] + '_WT'
     data = pd.merge(left=data, right=prot_descriptor, on ='accession', how='left')
     missing = data[data['protein_descriptor'].isna()]
     print(f'{len(missing)} datapoints without protein descriptor')
@@ -28,7 +28,7 @@ def add_protein_descriptors_and_pad(data, prot_descriptor_path):
 
 def unscale_predictions(predictions, scaler_csv_path, global_mean=0, global_std=1):
     scaler_lookup = pd.read_csv(scaler_csv_path)
-    scaler_lookup['accession'] = scaler_lookup['accession'] + '_WT'
+    # scaler_lookup['accession'] = scaler_lookup['accession'] + '_WT'
     output_df = pd.merge(predictions, scaler_lookup, on='accession', how='left')
     output_df['mean'] = output_df['mean'].fillna(global_mean)
     output_df['std'] = output_df['std'].fillna(global_std)
@@ -94,13 +94,9 @@ def run_model_inference_PCM(model : str,
     if scaler_path is not None:
         # print(os.path.split(scaler_path)[0] + '/scaler')
         if os.path.exists(os.path.split(scaler_path)[0] + '/scaler'):
-            # print('protein descriptor scaler found, loading...')
             scaler = joblib.load(scaler_path + '/scaler')
         else:
             print('no protein descriptor scaler associated yet')
-            # scaler = StandardScaler()
-            # scaler = scaler.fit(np.array(prot.to_list()))
-            # joblib.dump(scaler, os.path.splitext(scaler_path)[0] + '.scaler')
         scaled = scaler.transform(np.array(prot.to_list()))
         data['protein_descriptor'] = list(scaled)
     
@@ -128,49 +124,84 @@ def get_performance(true, pred):
 
 
 if __name__ == '__main__':
-    censored_test = pd.read_csv('/home/boefma/auxiliary_ranking/data/PCM_luukkonnen_cluster_split_no_saifudeen_ext.csv')
+    current_dir = pathlib.Path(__file__).resolve().parent
+    censored_test = pd.read_csv(current_dir / 'data/datasets/cluster_split_base_set.csv')
     censored_test = censored_test[censored_test['Subset'].isin(['test', 'valid'])]
-    censored_test = censored_test[censored_test['relation'] != '=']
+    censored_test = censored_test[censored_test['fixed_relation'] != '=']
     censored_test['value'] = censored_test['pchembl_value_Mean']
     
-    random_test = pd.read_csv('/home/boefma/auxiliary_ranking/data/PCM_luukkonnen_no_saifudeen_ext.csv')
+    random_test = pd.read_csv(current_dir / 'data/datasets/random_split_base_set.csv')
     random_test = random_test[random_test['Subset'] == 'test']
-    random_test = random_test[random_test['relation'] == '=']
+    # random_test = random_test[random_test['fixed_relation'] == '=']
     random_test['value'] = random_test['pchembl_value_Mean']
     
     
-    cluster_test = pd.read_csv('/home/boefma/auxiliary_ranking/data/PCM_luukkonnen_cluster_split_no_saifudeen_ext.csv')
+    cluster_test = pd.read_csv(current_dir / 'data/datasets/cluster_split_base_set.csv')
     cluster_test = cluster_test[cluster_test['Subset'] == 'test']
     cluster_test = cluster_test[cluster_test['relation'] == '=']
     cluster_test['value'] = cluster_test['pchembl_value_Mean']
     
-    saifudeen_test = pd.read_parquet('/zfsdata/data/boefma/kinase_data/saifudeen_data_dose_curves.parquet')
-    saifudeen_test['accession'] = saifudeen_test['Uniprot ID'] + '_WT'
+    saifudeen_test = pd.read_csv(current_dir / 'data/datasets/saifudeen_pec50_data.csv')
+    saifudeen_test['accession'] = saifudeen_test['Entry']
     saifudeen_test['value'] = saifudeen_test['pEC50']
     saifudeen_test = saifudeen_test[saifudeen_test['pEC50'].notna()]
     
-    saifudeen_train = pd.read_csv('/home/boefma/auxiliary_ranking/data/PCM_luukkonnen_saifudeen_ext.csv')
+    saifudeen_train = pd.read_csv(current_dir / 'data/datasets/saifudeen_percent_inhibition_data.csv')
+    saifudeen_train['accession'] = saifudeen_train['Entry']
     saifudeen_train = saifudeen_train[saifudeen_train.percent_inhibition.notna()]
     
     base_path = '/home/boefma/publication_pw_aux_rank/pw_aux_rank/models/'
-
+    
+    
+    '''
     split = 'cluster_split_base_set/'
-    models = ['1/best-23-val_rmse.pt',
-              '2/best-46-val_rmse.pt',
-              '3/best-27-val_rmse.pt',
-              '4/best-96-val_rmse.pt',
-              '5/best-23-val_rmse.pt'
+    models = ['1/best-55-val_rmse.pt',
+              '2/best-45-val_rmse.pt',
+              '3/best-64-val_rmse.pt',
+              '4/best-36-val_rmse.pt',
+              '5/best-35-val_rmse.pt',
               ]
+    '''
+    
+    '''
+    split = 'cluster_split_base_rank_set/'
+    models = ['1/best-38-val_rmse.pt',
+              '2/best-17-val_rmse.pt',
+              '3/best-62-val_rmse.pt',
+              '4/best-22-val_rmse.pt',
+              '5/best-33-val_rmse.pt'
+              ]
+    '''
+    '''
+    split = 'cluster_split_ext_rank_set/'
+    models = ['1/best-41-val_rmse.pt',
+              '2/best-55-val_rmse.pt',
+              '3/best-42-val_rmse.pt',
+              '4/best-68-val_rmse.pt',
+              '5/best-58-val_rmse.pt',
+              ]
+    '''
+    
+    split = 'cluster_split_ext_rank_cont_set/'
+    models = ['1/best-39-val_rmse.pt',
+              '2/best-48-val_rmse.pt', 
+              '3/best-71-val_rmse.pt', 
+              '4/best-60-val_rmse.pt',
+              '5/best-41-val_rmse.pt',
+              ]
+              
     
     for model in models:
         model_path = os.path.join(base_path, split, model)
         prot_scaler_path = os.path.join(base_path, split)
         y_scaler_path = os.path.join(base_path, split, 'target_scaler.csv')
         model_dir = pathlib.Path(model_path).parent
-        
+
+        '''
         random_preds = generate_preds([model_path], prot_scaler_path, random_test, y_scaler_path)
         print(f'random split test - RMSE, R2, Spearman R: {get_performance(random_preds.value, random_preds.unscaled_prediction)}')
         random_preds.to_csv(f'{model_dir}/random_test_preds.csv', index=False)
+        '''
         
         cluster_preds = generate_preds([model_path], prot_scaler_path, cluster_test, y_scaler_path)
         print(f'cluster split test - RMSE, R2, Spearman R: {get_performance(cluster_preds.value, cluster_preds.unscaled_prediction)}')
@@ -181,12 +212,11 @@ if __name__ == '__main__':
         print(f'saifudeen test set - RMSE, R2, Spearman R: {get_performance(saifudeen_test_preds.value, saifudeen_test_preds.unscaled_prediction)}')
         saifudeen_test_preds.to_csv(f'{model_dir}/saifudeen_test_preds.csv', index=False)
 
+        '''
         saifudeen_train_preds = generate_preds([model_path], prot_scaler_path, saifudeen_train, y_scaler_path)
         saifudeen_train_preds = saifudeen_train_preds[saifudeen_train_preds['prediction_0'] != saifudeen_train_preds['unscaled_prediction']]
         saifudeen_train_preds.to_csv(f'{model_dir}/saifudeen_train_preds.csv', index=False)
 
         censored_test_preds = generate_preds([model_path], prot_scaler_path, censored_test, y_scaler_path)
         censored_test_preds.to_csv(f'{model_dir}/censored_test_preds.csv', index=False)
-
-        
-        
+        '''

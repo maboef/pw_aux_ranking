@@ -44,15 +44,17 @@ def train_auxiliary_chemprop_PCM(train, valid, model_path: str,  **kwargs):
     lt_mask = np.expand_dims(np.array(dataset['fixed_relation'].str.contains('<').values), axis=1)
     gt_mask = np.expand_dims(np.array(dataset['fixed_relation'].str.contains('>').values), axis=1)
     
-    if 'rank_split' and 'scaled_pchembl_value' and 'scaled_percent_inhibition' in dataset:
-        aux_mask = dataset[['rank_split', 'scaled_pchembl_value', 'scaled_percent_inhibition']].to_numpy()
+    if 'rank_split' and 'rank_pchembl_value_Mean' and 'rank_percent_inhibition' in dataset:
+        aux_mask = dataset[['rank_split', 'rank_pchembl_value_Mean', 'rank_percent_inhibition']].to_numpy()
         print(f'aux_mask unique: {aux_mask.shape}')
     elif 'rank_split' in dataset:
-        dataset['scaled_pchembl_value'] = np.nan
-        dataset['scaled_percent_inhibition'] = np.nan
-        aux_mask = dataset[['rank_split', 'scaled_pchembl_value', 'scaled_percent_inhibition']].to_numpy()
+        dataset['rank_percent_inhibition'] = np.nan
+        dataset['rank_pchembl_value_Mean'] = np.nan
+        aux_mask = dataset[['rank_split', 'rank_pchembl_value_Mean', 'rank_percent_inhibition']].to_numpy()
         print(f'aux_mask unique: {aux_mask.shape}')
     else:
+        print(dataset['rank_split'])
+        print(dataset['rank_pchembl_value_Mean'])
         print('no rank split column found')
         aux_mask = np.expand_dims(np.ones(len(ys)), axis=1)
 
@@ -87,7 +89,8 @@ def train_auxiliary_chemprop_PCM(train, valid, model_path: str,  **kwargs):
                             n_layers=params['ffn_num_layers'],
                             dropout=params['dropout'],
                             activation=params['activation'],
-                            criterion=MSEPlusPairwiseRankingLoss(rank_dist=params['rank_dist'],
+                            criterion=MSEPlusPairwiseRankingLoss(rank_margin_1=params['rank_margin_1'],
+                                                                 rank_margin_2=params['rank_margin_2'],
                                                                  categorical_dist=params['categorical_dist']))
 
     if params['aggregation'] == 'mean':
@@ -97,7 +100,7 @@ def train_auxiliary_chemprop_PCM(train, valid, model_path: str,  **kwargs):
     metric_list = [nn.metrics.RMSE()]
     chemprop_model = CustomMPNN(mp, agg, ffn, batch_norm=False, metrics=metric_list, max_lr=params['max_lr'])
     trainer = pl.Trainer(logger=True, enable_checkpointing=False, max_epochs=params['epochs'], accelerator='gpu', 
-                         devices=[3], deterministic=True, callbacks=[TorchModelSaver(
+                         devices=[0], deterministic=True, callbacks=[TorchModelSaver(
         dirpath=model_path,
         filename="best-{epoch}-val_rmse",
         monitor="val/rmse",
