@@ -6,7 +6,7 @@
 *.gz
 *.pkl
 *.fasta
-/scaler
+*/scaler
 .ipynb_checkpoints/
 checkpoints/
 lightning_logs/
