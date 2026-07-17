@@ -145,12 +145,13 @@ class MultiObjectiveFFN(torch.nn.Module, HasHParams):
         return logits_mat, None
 
 class MSEPlusPairwiseRankingLoss(metrics.ChempropMetric):
-    def __init__(self, rank_dist, categorical_dist):
+    def __init__(self, rank_margin_1, rank_margin_2, categorical_dist):
         super().__init__()
         self.bounded_mse = nn.BoundedMSE()
         self.ce_loss = torch.nn.BCEWithLogitsLoss(reduce='mean')
         self.alias = 'combined_regression_rank_loss'
-        self.rank_dist = rank_dist
+        self.rank_margin_1 = rank_margin_1
+        self.rank_margin_2 = rank_margin_2
         self.categorical_dist = categorical_dist
     
     def compute_generalized_pair_loss(self, logits_arc, rank_split):
@@ -190,8 +191,8 @@ class MSEPlusPairwiseRankingLoss(metrics.ChempropMetric):
         
         pair_mask = (
             (using_x & (x_diffs > self.categorical_dist)) |
-            (using_y & (y_diffs > self.rank_dist)) |
-            (using_z & (z_diffs > self.rank_dist)))
+            (using_y & (y_diffs > self.rank_margin_1)) |
+            (using_z & (z_diffs > self.rank_margin_2)))
         if not pair_mask.any():
             return torch.tensor(0.0, device=logits_arc.device, requires_grad=True)
         

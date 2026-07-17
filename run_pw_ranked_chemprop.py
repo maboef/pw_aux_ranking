@@ -77,6 +77,7 @@ def run_model(
     data = pd.read_csv(data_path)
     data['value'] = data['pchembl_value_Mean']
     data['subset'] = data['Subset']
+    data['fixed_relation'] = data['relation']
     
     data = add_protein_descriptors_and_pad(data, prot_descriptor_path)
     prot = data['protein_descriptor']
@@ -87,7 +88,7 @@ def run_model(
     train = train.reset_index(drop=True)
     train_size = len(train)
     valid = data[data['subset'] == 'valid']
-    valid = valid[valid['fixed_relation'] == '='] # ensure none of the censored data is used for 
+    valid = valid[valid['fixed_relation'] == '='] # ensure none of the censored data is used for
     valid = valid.reset_index(drop=True)
     valid_size = len(valid)
     test = data[data['subset'] == 'test']
@@ -97,13 +98,11 @@ def run_model(
 
     # value scaling
     scaler_lookup, scaler_path = value_scaler(train, model_path)
-    print(scaler_lookup)
-    print(train)
     train = train.merge(scaler_lookup, on='accession', how='left')
     train['value'] = (train['value'] - train['mean']) / train['std']
     valid = valid.merge(scaler_lookup, on='accession', how='left')
     valid['value'] = (valid['value'] - valid['mean']) / valid['std']
-    print(len(train['rank_split'].unique()))
+    print(f"unique rank split values: {len(train['rank_split'].unique())}")
     if 'rank_split' not in train:
         train['rank_split'] = np.nan
     if len(train['rank_split'].unique()) <5:
@@ -121,17 +120,18 @@ def run_model(
         'aggregation': 'mean',
         'max_lr': 0.002,
         'epochs': epochs,
-        'bias': False,
+        'bias': True,
         'batch_size': 512,
         'extension': extension,
         'seed': seed,
-        'rank_dist': 0.3,
+        'rank_margin_1': 2, # margin for pchembl_value ranking
+        'rank_margin_2' : 30, # margin for pct inhibition ranking
         'categorical_dist': categorical_dist}
     model_path = (model_path / str(seed))
     trainer, model = train_auxiliary_chemprop_PCM(train, valid, model_path, **params)
 
 if __name__ == '__main__':
     current_dir = Path(__file__).resolve().parent
-    for seed in range(5):
+    for seed in range(10):
         seed = seed+1
-        run_model(dataset_dir=current_dir / 'data/datasets/', current_dir=current_dir, protein_descriptor='Z-scales', extension='cluster_split_base_set', seed=seed) 
+        run_model(dataset_dir=current_dir / 'data/datasets/', current_dir=current_dir, protein_descriptor='Z-scales', extension='cluster_split_ext_rank_cont_set', seed=seed) 

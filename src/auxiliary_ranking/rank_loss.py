@@ -28,12 +28,13 @@ def ce_loss(logits, targets, reduction="none"):
         return F.nll_loss(log_pred, targets, reduction=reduction)
 
 class MSEPlusPairwiseRankingLoss(metrics.ChempropMetric):
-    def __init__(self, rank_dist, categorical_dist):
+    def __init__(self, rank_margin_1, rank_margin_2, categorical_dist):
         super().__init__()
         self.bounded_mse = BoundedMSE()
         self.ce_loss = torch.nn.BCEWithLogitsLoss(reduce='mean')
         self.alias = 'combined_regression_rank_loss'
-        self.rank_dist = rank_dist
+        self.rank_margin_1 = rank_margin_1
+        self.rank_margin_2 = rank_margin_2
         self.categorical_dist = categorical_dist
     
     def compute_generalized_pair_loss(self, logits_arc, rank_split):
@@ -62,10 +63,6 @@ class MSEPlusPairwiseRankingLoss(metrics.ChempropMetric):
         both_have_y = has_y.unsqueeze(1) & has_y.unsqueeze(0)
         both_have_z = has_z.unsqueeze(1) & has_z.unsqueeze(0)
         
-        effective_rank_diffs = x_diffs.clone()
-        effective_rank_diffs = torch.where(both_have_z, z_diffs, effective_rank_diffs)
-        effective_rank_diffs = torch.where(both_have_y, y_diffs, effective_rank_diffs)
-        
         # Which rank level is actually being used?
         using_z = both_have_z
         using_y = both_have_y & ~both_have_z
@@ -73,8 +70,8 @@ class MSEPlusPairwiseRankingLoss(metrics.ChempropMetric):
         
         pair_mask = (
             (using_x & (x_diffs > self.categorical_dist)) |
-            (using_y & (y_diffs > self.rank_dist)) |
-            (using_z & (z_diffs > self.rank_dist)))
+            (using_y & (y_diffs > self.rank_margin_1)) |
+            (using_z & (z_diffs > self.rank_margin_2)))
         if not pair_mask.any():
             return torch.tensor(0.0, device=logits_arc.device, requires_grad=True)
         
@@ -113,8 +110,8 @@ class MSEPlusPairwiseRankingLoss(metrics.ChempropMetric):
                 print('pair loss produced NaN')
                 return mse_loss
             else:
-                # with open('loss_log_.txt', 'a') as f:
-                #     f.write(f'mse_loss: {mse_loss.item():.6f}, pair_loss: {pair_loss_.item():.6f}\n')
+                with open('loss_log_.txt', 'a') as f:
+                    f.write(f'mse_loss: {mse_loss.item():.6f}, pair_loss: {pair_loss_.item():.6f}\n')
                 return mse_loss + pair_loss_
         else:
             print(f'issue calculating pair loss')
