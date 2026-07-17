@@ -1,11 +1,11 @@
 import pandas as pd
 import numpy as np
 
+from pathlib import Path
+
 from rdkit import DataStructs
 from rdkit.Chem import Descriptors, AllChem
 from papyrus_structure_pipeline import standardizer as Papyrus_standardizer
-
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 
 def standardize_compounds(smiles):
@@ -31,6 +31,7 @@ def standardize_saifudeen(saifudeen_data):
     saifudeen_data['Activity_ID'] = saifudeen_data['InChiKey'].str[:-13] + '_on_' + saifudeen_data['target_id']
     saifudeen_data['InChIKey'] = saifudeen_data['InChiKey'] 
     saifudeen_data['Year'] = 2026
+    saifudeen_data['Quality'] = 'Saifudeen'
     saifudeen_data[['relation', 'fixed_relation']] = '=', '='
     saifudeen_data[['type_IC50', 'type_EC50', 'type_KD', 'type_Ki', 'type_other']] = 0, 0, 0, 0, 1
     saifudeen_data['Subset'] = 'train'
@@ -40,7 +41,7 @@ def standardize_saifudeen(saifudeen_data):
     pct_inh_saifudeen_data['rank_split'] = pd.cut(pct_inh_saifudeen_data['percent_inhibition'], bins=bins, labels=labels)
     return saifudeen_data
 
-def standardize_base(base_data)
+def standardize_base(base_data):
     bins = [0, 5.5, 7.5, 15]
     labels = [0, 1, 2]
     base_data['rank_split'] = pd.cut(base_data['pchembl_value_Mean'], bins=bins, labels=labels)
@@ -71,13 +72,15 @@ if __name__ == '__main__':
     
     regression_data['rank_split'] = np.nan
     regression_data[['Activity_ID', 'Quality', 'source', 'SMILES', 'target_id', 'accession', 'fixed_relation', 'pchembl_value_Mean']]
-    necessary_columns = ['SMILES', 'Activity_ID', 'InChIKey', 'Subset', 'accession', 'mut', 'pchembl_value_Mean', 'Quality', 'rank_split', 'percent_inhibition', 'relation', 'fixed_relation']
-    cluster_base = cluster_base[necessary_columns]
-    random_base = random_base[necessary_columns]
+    necessary_columns = ['SMILES', 'Activity_ID', 'InChIKey', 'Subset', 'accession',  'pchembl_value_Mean', 'Quality', 'rank_split', 'relation', 'fixed_relation']
+    
     cluster_base = pd.merge(regression_data, cluster_split[['SMILES', 'Subset']], on='SMILES')
     random_base = pd.merge(regression_data, random_split[['SMILES', 'Subset']], on='SMILES')
-    cluster_base.to_csv(current_dir / 'data/datasets/filtered_cluster_split_base_set.csv', index=False)
-    random_base.to_csv(current_dir / 'data/datasets/filtered_random_split_base_set.csv', index=False)
+    cluster_base = cluster_base[necessary_columns]
+    random_base = random_base[necessary_columns]
+    
+    cluster_base.to_csv(current_dir / 'data/datasets/cluster_split_base_set.csv', index=False)
+    random_base.to_csv(current_dir / 'data/datasets/random_split_base_set.csv', index=False)
     
     # inclusion of rank_split column
     cluster_rank = standardize_base(cluster_base)
@@ -99,6 +102,9 @@ if __name__ == '__main__':
     cluster_merged = merge_sets(cluster_rank, pct_inh_saifudeen_data)
     random_merged = merge_sets(random_rank, pct_inh_saifudeen_data)
 
+    cluster_merged.to_csv('data/datasets/cluster_split_ext_rank_set.csv', index=False)
+    random_merged.to_csv('data/datasets/random_split_ext_rank_set.csv', index=False)
+    
     cluster_merged['rank_pchembl_value_Mean'] = cluster_merged['pchembl_value_Mean'] 
     cluster_merged['rank_percent_inhibition'] = cluster_merged['percent_inhibition'] 
     
