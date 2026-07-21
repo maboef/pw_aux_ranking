@@ -77,7 +77,7 @@ def run_model(
     data = pd.read_csv(data_path)
     data['value'] = data['pchembl_value_Mean']
     data['subset'] = data['Subset']
-    data['fixed_relation'] = data['relation']
+    # data['fixed_relation'] = data['relation']
     
     data = add_protein_descriptors_and_pad(data, prot_descriptor_path)
     prot = data['protein_descriptor']
@@ -124,7 +124,7 @@ def run_model(
         'batch_size': 512,
         'extension': extension,
         'seed': seed,
-        'rank_margin_1': 2, # margin for pchembl_value ranking
+        'rank_margin_1': 1.5, # margin for pchembl_value ranking
         'rank_margin_2' : 30, # margin for pct inhibition ranking
         'categorical_dist': categorical_dist}
     model_path = (model_path / str(seed))
@@ -134,4 +134,4 @@ if __name__ == '__main__':
     current_dir = Path(__file__).resolve().parent
     for seed in range(10):
         seed = seed+1
-        run_model(dataset_dir=current_dir / 'data/datasets/', current_dir=current_dir, protein_descriptor='Z-scales', extension='cluster_split_ext_rank_cont_set', seed=seed) 
+        run_model(dataset_dir=current_dir / 'data/datasets/', current_dir=current_dir, protein_descriptor='Z-scales', extension='cluster_split_ext_rank_set', seed=seed) 
