@@ -28,7 +28,7 @@ def standardize_saifudeen(saifudeen_data):
     saifudeen_data['source'] = 'Saifudeen2026'
     saifudeen_data['accession'] = saifudeen_data['Entry'] 
     saifudeen_data['target_id'] = saifudeen_data['accession'] + '_' + saifudeen_data['mut']
-    saifudeen_data['Activity_ID'] = saifudeen_data['InChiKey'].str[:-13] + '_on_' + saifudeen_data['target_id']
+    saifudeen_data['Activity_ID'] = saifudeen_data['InChiKey'] + '_on_' + saifudeen_data['target_id']
     saifudeen_data['InChIKey'] = saifudeen_data['InChiKey'] 
     saifudeen_data['Year'] = 2026
     saifudeen_data['Quality'] = 'Saifudeen'
@@ -49,6 +49,7 @@ def standardize_base(base_data):
     base_data.loc[condition, 'rank_split'] = np.nan
     base_data['percent_inhibition'] = np.nan
     base_data['mut'] = 'WT'
+    base_data['Activity_ID'] = base_data['InChIKey'] + '_on_' + base_data['accession']
     return base_data
 
 def merge_sets(base_data, saifudeen_data):
@@ -59,7 +60,6 @@ def merge_sets(base_data, saifudeen_data):
     merged_sets = merged_sets.reset_index(drop=True)
     merged_sets = merged_sets[merged_sets['mut'] == 'WT']
     return merged_sets
-    
 
 
 if __name__ == '__main__':
@@ -97,6 +97,7 @@ if __name__ == '__main__':
     pct_inh_saifudeen_data = pct_inh_saifudeen_data.drop('SMILES', axis=1)
     pct_inh_saifudeen_data = pct_inh_saifudeen_data.merge(compounds, on='drug_name')
     pct_inh_saifudeen_data = standardize_saifudeen(pct_inh_saifudeen_data)
+    necessary_columns = ['SMILES', 'Activity_ID', 'InChIKey', 'Subset', 'accession',  'pchembl_value_Mean', 'Quality', 'rank_split', 'mut', 'relation', 'fixed_relation', 'percent_inhibition']
     pct_inh_saifudeen_data = pct_inh_saifudeen_data[necessary_columns]
 
     cluster_merged = merge_sets(cluster_rank, pct_inh_saifudeen_data)

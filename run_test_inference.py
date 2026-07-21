@@ -132,7 +132,7 @@ if __name__ == '__main__':
     
     random_test = pd.read_csv(current_dir / 'data/datasets/random_split_base_set.csv')
     random_test = random_test[random_test['Subset'] == 'test']
-    # random_test = random_test[random_test['fixed_relation'] == '=']
+    random_test = random_test[random_test['fixed_relation'] == '=']
     random_test['value'] = random_test['pchembl_value_Mean']
     
     
@@ -156,40 +156,42 @@ if __name__ == '__main__':
     '''
     split = 'cluster_split_base_set/'
     models = ['1/best-55-val_rmse.pt',
-              '2/best-45-val_rmse.pt',
-              '3/best-64-val_rmse.pt',
-              '4/best-36-val_rmse.pt',
-              '5/best-35-val_rmse.pt',
-              ]
+          '2/best-45-val_rmse.pt',
+          '3/best-64-val_rmse.pt',
+          '4/best-36-val_rmse.pt',
+          '5/best-35-val_rmse.pt',
+         ]
     '''
     
     '''
     split = 'cluster_split_base_rank_set/'
-    models = ['1/best-38-val_rmse.pt',
-              '2/best-17-val_rmse.pt',
-              '3/best-62-val_rmse.pt',
-              '4/best-22-val_rmse.pt',
-              '5/best-33-val_rmse.pt'
-              ]
-    '''
-    '''
-    split = 'cluster_split_ext_rank_set/'
-    models = ['1/best-41-val_rmse.pt',
-              '2/best-55-val_rmse.pt',
-              '3/best-42-val_rmse.pt',
-              '4/best-68-val_rmse.pt',
-              '5/best-58-val_rmse.pt',
-              ]
+    models = ['1/best-55-val_rmse.pt',
+          '2/best-45-val_rmse.pt',
+          '3/best-64-val_rmse.pt',
+          '4/best-36-val_rmse.pt',
+          '5/best-35-val_rmse.pt',
+         ]
+    
     '''
     
+    
+    split = 'cluster_split_ext_rank_set/'
+    models = [# '1/best-42-val_rmse.pt',
+              # '2/best-26-val_rmse.pt',
+              # '3/best-50-val_rmse.pt',
+              # '4/best-51-val_rmse.pt',
+              '5/best-74-val_rmse.pt',
+         ]
+    
+    '''
     split = 'cluster_split_ext_rank_cont_set/'
-    models = ['1/best-39-val_rmse.pt',
-              '2/best-48-val_rmse.pt', 
-              '3/best-71-val_rmse.pt', 
-              '4/best-60-val_rmse.pt',
-              '5/best-41-val_rmse.pt',
-              ]
-              
+    models = [# '1/best-51-val_rmse.pt',
+              #'2/best-50-val_rmse.pt',
+              # '3/best-26-val_rmse.pt',
+              # '4/best-72-val_rmse.pt',
+              '5/best-52-val_rmse.pt',
+         ] 
+    '''
     
     for model in models:
         model_path = os.path.join(base_path, split, model)
