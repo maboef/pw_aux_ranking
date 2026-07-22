@@ -7,6 +7,8 @@
 *.pkl
 *.fasta
 */scaler
+*.ipynb
+
 .ipynb_checkpoints/
 checkpoints/
 lightning_logs/

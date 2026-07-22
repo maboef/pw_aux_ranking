@@ -56,14 +56,14 @@ def predict_chemprop_PCM(dataset, model_paths: list):
     all_predictions = []
 
     for i, model_path in enumerate(model_paths):
-        model = torch.load(model_path, weights_only=False)
-        
+        model = torch.load(model_path, map_location="cpu", weights_only=False)
+        model = model.to("cuda")
         with torch.inference_mode():
             trainer = pl.Trainer(
                 logger=None,
                 enable_progress_bar=True,
                 accelerator="gpu",
-                devices=1
+                devices=[0]
             )
             
             raw_preds = trainer.predict(model, test_loader)
@@ -152,46 +152,58 @@ if __name__ == '__main__':
     
     base_path = '/home/boefma/publication_pw_aux_rank/pw_aux_rank/models/'
     
-    
     '''
     split = 'cluster_split_base_set/'
-    models = ['1/best-55-val_rmse.pt',
-          '2/best-45-val_rmse.pt',
-          '3/best-64-val_rmse.pt',
-          '4/best-36-val_rmse.pt',
-          '5/best-35-val_rmse.pt',
+    models = ['1/best-51-val_rmse.pt',
+              '2/best-58-val_rmse.pt',
+              # '3/best-64-val_rmse.pt',
+              '4/best-91-val_rmse.pt',
+              '5/best-76-val_rmse.pt',
+              # 6/best-35-val_rmse.pt',
+              '7/best-69-val_rmse.pt',
+              '8/best-60-val_rmse.pt',
          ]
     '''
     
     '''
     split = 'cluster_split_base_rank_set/'
-    models = ['1/best-55-val_rmse.pt',
-          '2/best-45-val_rmse.pt',
-          '3/best-64-val_rmse.pt',
-          '4/best-36-val_rmse.pt',
-          '5/best-35-val_rmse.pt',
-         ]
-    
+    models = ['1/best-68-val_rmse.pt',
+              '2/best-58-val_rmse.pt',
+              # '3/best-64-val_rmse.pt',
+              '4/best-84-val_rmse.pt',
+              '5/best-83-val_rmse.pt',
+              '7/best-79-val_rmse.pt',
+              '8/best-52-val_rmse.pt',
+             ]
     '''
     
-    
+    '''
     split = 'cluster_split_ext_rank_set/'
-    models = [# '1/best-42-val_rmse.pt',
-              # '2/best-26-val_rmse.pt',
-              # '3/best-50-val_rmse.pt',
-              # '4/best-51-val_rmse.pt',
-              '5/best-74-val_rmse.pt',
+    models = ['1/best-39-val_rmse.pt',
+              '2/best-77-val_rmse.pt',
+              '3/best-36-val_rmse.pt',
+              '4/best-66-val_rmse.pt',
+              '5/best-72-val_rmse.pt',
+              # '6/best-98-val_rmse.pt',
+              '7/best-88-val_rmse.pt',
+              '8/best-67-val_rmse.pt',
          ]
     
     '''
+    
     split = 'cluster_split_ext_rank_cont_set/'
-    models = [# '1/best-51-val_rmse.pt',
-              #'2/best-50-val_rmse.pt',
+    models = ['1/best-60-val_rmse.pt',
+              '2/best-61-val_rmse.pt',
               # '3/best-26-val_rmse.pt',
-              # '4/best-72-val_rmse.pt',
-              '5/best-52-val_rmse.pt',
-         ] 
-    '''
+              '4/best-92-val_rmse.pt',
+              '5/best-45-val_rmse.pt',
+              # '6/best-19-val_rmse.pt',
+              '7/best-43-val_rmse.pt',
+              '8/best-72-val_rmse.pt',
+              # '9/best-40-val_rmse.pt',
+              # '10/best-87-val_rmse.pt',
+             ]
+
     
     for model in models:
         model_path = os.path.join(base_path, split, model)

@@ -100,7 +100,7 @@ def train_auxiliary_chemprop_PCM(train, valid, model_path: str,  **kwargs):
     metric_list = [nn.metrics.RMSE()]
     chemprop_model = CustomMPNN(mp, agg, ffn, batch_norm=False, metrics=metric_list, max_lr=params['max_lr'])
     trainer = pl.Trainer(logger=True, enable_checkpointing=False, max_epochs=params['epochs'], accelerator='gpu', 
-                         devices=[0], deterministic=True, callbacks=[TorchModelSaver(
+                         devices=[2], deterministic=True, callbacks=[TorchModelSaver(
         dirpath=model_path,
         filename="best-{epoch}-val_rmse",
         monitor="val/rmse",

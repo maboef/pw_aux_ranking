@@ -31,10 +31,13 @@ def create_apply_scaler(prot, model_path):
     return scaled
 
 def value_scaler(train, model_path):
-    scaler_lookup = train.groupby('accession')['value'].agg(['mean', 'std']).reset_index()
-    scaler_lookup['std'] = scaler_lookup['std'].replace(0, 1).fillna(1)
     scaler_path = (model_path / 'target_scaler.csv')
-    scaler_lookup.to_csv(scaler_path, index=False)
+    if scaler_path.exists():
+        scaler_lookup = pd.read_csv(scaler_path)
+    else:
+        scaler_lookup = train.groupby('accession')['value'].agg(['mean', 'std']).reset_index()
+        scaler_lookup['std'] = scaler_lookup['std'].replace(0, 1).fillna(1)
+        scaler_lookup.to_csv(scaler_path, index=False)
     return scaler_lookup, scaler_path
 
 def run_model(
@@ -68,7 +71,8 @@ def run_model(
     """
     # If param_path is given, set params to HyperOpt istaed of the name of the method
     # Create paths
-    model_path = (current_dir / 'models'/ extension)
+    extension_ = extension + str('_loss_plot')
+    model_path = (current_dir / 'models'/ extension_)
     Path(model_path).mkdir(parents=True, exist_ok=True)
     data_path = dataset_dir / extension
     data_path = data_path.with_suffix('.csv')
@@ -114,13 +118,13 @@ def run_model(
     params = {
         'hidden_size': 512, 
         'depth': 3,
-        'dropout': 0.1,
+        'dropout': 0.2,
         'ffn_num_layers': 3,
         'activation': 'LeakyReLU',
         'aggregation': 'mean',
         'max_lr': 0.002,
         'epochs': epochs,
-        'bias': True,
+        'bias': False,
         'batch_size': 512,
         'extension': extension,
         'seed': seed,
@@ -132,6 +136,6 @@ def run_model(
 
 if __name__ == '__main__':
     current_dir = Path(__file__).resolve().parent
-    for seed in range(10):
+    for seed in range(1):
         seed = seed+1
-        run_model(dataset_dir=current_dir / 'data/datasets/', current_dir=current_dir, protein_descriptor='Z-scales', extension='cluster_split_ext_rank_set', seed=seed) 
+        run_model(dataset_dir=current_dir / 'data/datasets/', current_dir=current_dir, protein_descriptor='Z-scales', extension='cluster_split_ext_rank_cont_set', seed=seed) 
