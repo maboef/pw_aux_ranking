@@ -123,6 +123,17 @@ def get_performance(true, pred):
     return rmse, r2, spearmanr
 
 
+def find_model_path(base_path, split, seed):
+    """Find the single best-*-val_rmse.pt checkpoint in a seed's directory."""
+    seed_dir = pathlib.Path(base_path) / split / str(seed)
+    matches = sorted(seed_dir.glob('best-*-val_rmse.pt'))
+    if not matches:
+        raise FileNotFoundError(f'No model checkpoint found in {seed_dir}')
+    if len(matches) > 1:
+        raise ValueError(f'Multiple model checkpoints found in {seed_dir}: {matches}')
+    return matches[0]
+
+
 if __name__ == '__main__':
     current_dir = pathlib.Path(__file__).resolve().parent
     censored_test = pd.read_csv(current_dir / 'data/datasets/cluster_split_base_set.csv')
@@ -153,57 +164,66 @@ if __name__ == '__main__':
     base_path = '/home/boefma/publication_pw_aux_rank/pw_aux_rank/models/'
     
     '''
+    
     split = 'cluster_split_base_set/'
-    models = ['1/best-51-val_rmse.pt',
-              '2/best-58-val_rmse.pt',
-              # '3/best-64-val_rmse.pt',
-              '4/best-91-val_rmse.pt',
-              '5/best-76-val_rmse.pt',
-              # 6/best-35-val_rmse.pt',
-              '7/best-69-val_rmse.pt',
-              '8/best-60-val_rmse.pt',
+    models = [# '1/best-51-val_rmse.pt',
+              # '2/best-58-val_rmse.pt',
+              '3/best-93-val_rmse.pt',
+              # '4/best-91-val_rmse.pt',
+              # '5/best-96-val_rmse.pt',
+              '6/best-92-val_rmse.pt',
+              # '7/best-69-val_rmse.pt',
+              # '8/best-60-val_rmse.pt',
+                '9/best-75-val_rmse.pt',
+                '10/best-51-val_rmse.pt'
          ]
     '''
     
-    '''
+    
     split = 'cluster_split_base_rank_set/'
-    models = ['1/best-68-val_rmse.pt',
-              '2/best-58-val_rmse.pt',
-              # '3/best-64-val_rmse.pt',
-              '4/best-84-val_rmse.pt',
-              '5/best-83-val_rmse.pt',
-              '7/best-79-val_rmse.pt',
-              '8/best-52-val_rmse.pt',
+    models = [#'1/best-68-val_rmse.pt',
+              # '2/best-93-val_rmse.pt',
+              '3/best-74-val_rmse.pt',
+              # '4/best-84-val_rmse.pt',
+              # '5/best-83-val_rmse.pt',
+              # '6/best-71-val_rmse.pt',
+              # '7/best-79-val_rmse.pt',
+              # '8/best-52-val_rmse.pt',
+              # '9/best-75-val_rmse.pt',
+              # z'10/best-74-val_rmse.pt'
              ]
-    '''
+    
+    
     
     '''
     split = 'cluster_split_ext_rank_set/'
-    models = ['1/best-39-val_rmse.pt',
-              '2/best-77-val_rmse.pt',
-              '3/best-36-val_rmse.pt',
-              '4/best-66-val_rmse.pt',
-              '5/best-72-val_rmse.pt',
-              # '6/best-98-val_rmse.pt',
-              '7/best-88-val_rmse.pt',
-              '8/best-67-val_rmse.pt',
+    models = [# '1/best-39-val_rmse.pt',
+              # '2/best-77-val_rmse.pt',
+              # '3/best-52-val_rmse.pt',
+              # '4/best-66-val_rmse.pt',
+              # '5/best-72-val_rmse.pt',
+              # '6/best-60-val_rmse.pt',
+              # '7/best-88-val_rmse.pt',
+              # '8/best-98-val_rmse.pt',
+              # '9/best-64-val_rmse.pt',
+            '10/best-71-val_rmse.pt',
          ]
     
     '''
-    
+    '''
     split = 'cluster_split_ext_rank_cont_set/'
-    models = ['1/best-60-val_rmse.pt',
-              '2/best-61-val_rmse.pt',
-              # '3/best-26-val_rmse.pt',
-              '4/best-92-val_rmse.pt',
-              '5/best-45-val_rmse.pt',
-              # '6/best-19-val_rmse.pt',
-              '7/best-43-val_rmse.pt',
-              '8/best-72-val_rmse.pt',
-              # '9/best-40-val_rmse.pt',
-              # '10/best-87-val_rmse.pt',
+    models = [# '1/best-60-val_rmse.pt',
+              # '2/best-61-val_rmse.pt',
+              '3/best-67-val_rmse.pt',
+              # '4/best-92-val_rmse.pt',
+              # '5/best-45-val_rmse.pt',
+              '6/best-87-val_rmse.pt',
+              # '7/best-43-val_rmse.pt',
+              # '8/best-72-val_rmse.pt',
+              '9/best-80-val_rmse.pt',
+              '10/best-50-val_rmse.pt',
              ]
-
+    '''
     
     for model in models:
         model_path = os.path.join(base_path, split, model)
