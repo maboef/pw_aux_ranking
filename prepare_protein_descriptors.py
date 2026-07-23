@@ -134,7 +134,9 @@ def generate_descriptors(aligned_sequences, out):
 
 if __name__ == '__main__':
     current_dir = Path(__file__).resolve().parent
-    domain_sequences = 'kinase_domain_sequences.fasta'
     accessions = pd.read_csv(current_dir / 'data/saifudeen_2026_raw/kinase_uniprot_target_mapping.csv')['Entry']
+    prot_desc_dir = current_dir /'data/protein_descriptors/'
+    domain_sequences = 'kinase_domain_sequences.fasta'
+    get_kinase_domains(accessions, domain_sequences)
     
     
