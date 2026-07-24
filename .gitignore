@@ -1,10 +1,20 @@
-*.ipynb
+\*.ipynb
 *.csv
 *.png
 *.txt
 *.pt
+<<<<<<< HEAD
 scaler
+=======
+*.gz
+*.pkl
+*.fasta
+*/scaler
+*.ipynb
+
+>>>>>>> feature/pub-preparation
 .ipynb_checkpoints/
 checkpoints/
 lightning_logs/
 archive/
+__pycache__/

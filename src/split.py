@@ -218,7 +218,7 @@ def order_targets_per_number_of_datapoints(data, targets):
     
     return list(n_datapoints_per_target.keys())
     
-def random_global_equilibrated_random_split(data, targets, seed):
+def random_global_equilibrated_random_split(data, targets, seed=24):
     """
     Random Global Equilibrated Split (RGES) is done by sorting targets from the target 
     with the most data points to those with the least. Then, for each target, a random split was made. 
