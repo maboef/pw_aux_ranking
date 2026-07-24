@@ -20,7 +20,7 @@ from rdkit.Chem import Descriptors, AllChem
 from papyrus_scripts.reader import read_papyrus, read_protein_set
 from papyrus_scripts.preprocess import keep_protein_class, keep_quality, keep_type, consume_chunks, keep_source
 
-# from chembl_webresource_client.new_client import new_client
+from chembl_webresource_client.new_client import new_client
 
 
 def retrieve_kinase_data_from_Papyrus(source_path : str, version : str = '05.7', plusplus : bool = False, min_quality : str = 'low', sources: str = 'any'):
