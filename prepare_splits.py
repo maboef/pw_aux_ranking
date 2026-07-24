@@ -58,7 +58,6 @@ if __name__ == '__main__':
     cluster_split = dissimilaritydrive_global_balanced_cluster_split(regression_data_pivot, targets, [80, 10, 10])
     cluster_split.to_csv(data_path / 'pivotted_kinase_data_cluster_split.csv', index=False)
 
-    # inclusion of rank_split column
     '''
     regression_data['rank_split'] = np.nan
     regression_data[['Activity_ID', 'Quality', 'source', 'SMILES', 'target_id', 'accession', 'fixed_relation', 'pchembl_value_Mean']]
