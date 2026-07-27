@@ -68,7 +68,7 @@ def train_auxiliary_chemprop_PCM(train, valid, model_path: str,  **kwargs):
     train_dset = CustomMoleculeDataset(train_data[0][0], featurizer)
     val_dset = CustomMoleculeDataset(val_data[0][0], featurizer)
     print(f'length train_dset {len(train_dset)}')
-    train_loader = custom_build_dataloader(train_dset, batch_size=batch_size, shuffle=True, class_balance=False, drop_last=True, seed=params['seed'])
+    train_loader = custom_build_dataloader(train_dset, batch_size=batch_size, shuffle=True, class_balance=True, drop_last=True, seed=params['seed'])
     val_loader = custom_build_dataloader(val_dset, batch_size=batch_size, shuffle=False, class_balance=False)
     
     mp = nn.BondMessagePassing(d_h=params['hidden_size'], # hidden size (v1: hidden_size=300)
