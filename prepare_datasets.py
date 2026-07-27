@@ -36,13 +36,13 @@ def standardize_saifudeen(saifudeen_data):
     saifudeen_data[['type_IC50', 'type_EC50', 'type_KD', 'type_Ki', 'type_other']] = 0, 0, 0, 0, 1
     saifudeen_data['Subset'] = 'train'
     saifudeen_data['pchembl_value_Mean'] = np.nan
-    bins = [-1, 30, 70, 100]
+    bins = [-1, 30, 70, 100] #standard chosen binning values, might need more flexibility
     labels = [0, 1, 2]
     pct_inh_saifudeen_data['rank_split'] = pd.cut(pct_inh_saifudeen_data['percent_inhibition'], bins=bins, labels=labels)
     return saifudeen_data
 
 def standardize_base(base_data):
-    bins = [0, 5.5, 7.5, 15]
+    bins = [0, 5.5, 7.5, 15] #standard chosen binning values, might need more flexibility
     labels = [0, 1, 2]
     base_data['rank_split'] = pd.cut(base_data['pchembl_value_Mean'], bins=bins, labels=labels)
     condition = (base_data['fixed_relation'].str.contains('<', na=False)) & (cluster_base['pchembl_value_Mean'] > 5.5)
