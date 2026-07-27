@@ -1,6 +1,8 @@
 import numpy as np
 from dataclasses import dataclass
-from typing import Iterable, Optional, NamedTuple
+from typing import Iterable, Optional, Union, NamedTuple
+
+from itertools import zip_longest
 
 import torch
 from torch import Tensor, from_numpy
@@ -89,6 +91,81 @@ class MoleculeDatapoint(_DatapointMixin, _MoleculeDatapointMixin):
     def __len__(self) -> int:
         return 1
 
+'''
+class ClassBalanceSampler(Sampler):
+    """Samples data from a dataset such that classes are sampled according to specified ratios.
+
+    Parameters
+    ----------
+    Y : np.ndarray
+        1D array of class labels, shape (N,), OR a 2D one-hot/multi-label array,
+        shape (N, C), where each row belongs to exactly one class (its argmax column).
+    seed : int, optional
+        random seed used for shuffling (only used when `shuffle=True`)
+    shuffle : bool, default=False
+        whether to shuffle indices within each class before sampling
+    ratios : dict[label, float] or list[float], optional
+        relative sampling ratio per class. If None, all classes are weighted equally (1:1:...:1).
+        Ratios don't need to sum to 1 — they're relative weights, normalized internally
+        against whichever class runs out first.
+    """
+
+    def __init__(
+        self,
+        Y: np.ndarray,
+        seed: Optional[int] = None,
+        shuffle: bool = False,
+        ratios: Optional[Union[dict, list, tuple]] = None,
+    ):
+        self.shuffle = shuffle
+        self.rg = np.random.default_rng(seed)
+
+        Y = np.asarray(Y)
+        idxs = np.arange(len(Y))
+        labels = Y if Y.ndim == 1 else Y.argmax(1)
+
+        self.classes = np.unique(labels)
+        self.class_idxs = {c: idxs[labels == c] for c in self.classes}
+
+        if ratios is None:
+            ratios = {c: 1.0 for c in self.classes}
+        elif isinstance(ratios, (list, tuple)):
+            if len(ratios) != len(self.classes):
+                raise ValueError(
+                    f"length of `ratios` ({len(ratios)}) must match number of classes ({len(self.classes)})"
+                )
+            ratios = dict(zip(self.classes, ratios))
+        else:
+            missing = set(self.classes) - set(ratios)
+            if missing:
+                raise ValueError(f"`ratios` is missing entries for classes: {missing}")
+
+        self.ratios = ratios
+
+        # find the largest k such that k * ratio[c] <= available samples, for every class
+        k = min(len(self.class_idxs[c]) / self.ratios[c] for c in self.classes)
+        self.samples_per_class = {c: int(np.floor(k * self.ratios[c])) for c in self.classes}
+        self.length = sum(self.samples_per_class.values())
+
+    def __iter__(self) -> Iterator[int]:
+        """an iterator over indices to sample."""
+        per_class = {}
+        for c in self.classes:
+            idxs = self.class_idxs[c]
+            if self.shuffle:
+                idxs = idxs.copy()
+                self.rg.shuffle(idxs)
+            per_class[c] = idxs[: self.samples_per_class[c]]
+
+        # round-robin interleave across classes so batches stay mixed rather than
+        # block-ordered by class
+        groups = [per_class[c] for c in self.classes]
+        return iter(idx for group in zip_longest(*groups) for idx in group if idx is not None)
+
+    def __len__(self) -> int:
+        """the number of indices that will be sampled."""
+        return self.length
+'''        
 
 def custom_build_dataloader(
     dataset: CustomMoleculeDataset,
@@ -122,7 +199,9 @@ def custom_build_dataloader(
     """
     if class_balance:
         if dataset.aux_mask is not None:
-            balancing_class = np.isnan(dataset.Y) # balancing based on whether datapoints have value for regression loss calculation or not, aim for a 50/50 split of regression+ranking v ranking datapoints only. 
+            # balancing_class = np.isnan(dataset.y) # balancing based on whether datapoints have value for regression loss calculation or not, aim for a 50/50 split of regression+ranking v ranking datapoints only. 
+            balancing_class = np.isnan(dataset.aux_mask[:, 1]) & np.isnan(dataset.aux_mask[:, 2])
+            
             sampler = ClassBalanceSampler(balancing_class.astype(float), seed, shuffle)
     else:
         sampler = None
