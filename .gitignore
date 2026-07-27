@@ -3,18 +3,16 @@
 *.png
 *.txt
 *.pt
-<<<<<<< HEAD
-scaler
-=======
+*.pyc
 *.gz
 *.pkl
 *.fasta
 */scaler
 *.ipynb
 
->>>>>>> feature/pub-preparation
 .ipynb_checkpoints/
 checkpoints/
 lightning_logs/
 archive/
+models/
 __pycache__/
