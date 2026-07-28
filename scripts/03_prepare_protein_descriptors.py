@@ -138,5 +138,3 @@ if __name__ == '__main__':
     prot_desc_dir = current_dir /'data/protein_descriptors/'
     domain_sequences = prot_desc_dir / 'kinase_domain_sequences.fasta'
     get_kinase_domains(accessions, domain_sequences)
-    
-    

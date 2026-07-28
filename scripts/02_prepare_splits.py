@@ -32,7 +32,7 @@ if __name__ == '__main__':
     current_dir = Path(__file__).resolve().parent
     data_path = (current_dir / 'data/raw')
 
-    orthosteric_kinase_data = pd.read_csv(data_path / '04_orthosteric_kinase_data_corr_rel.csv.gz') 
+    orthosteric_kinase_data = pd.read_csv(data_path / 'orthosteric_kinase_data_corr_rel.csv.gz') 
 
     # Pre filtering
     regression_data = orthosteric_kinase_data[orthosteric_kinase_data['pchembl_value_Mean'].notna()]

@@ -13,8 +13,7 @@ from typing import List
 from rdkit import Chem, DataStructs
 from rdkit.Chem import Descriptors, AllChem
 
-from papyrus_scripts import PapyrusDataset
-from papyrus_scripts.preprocess import keep_protein_class, keep_quality, keep_activity_type, consume_chunks, keep_source
+from papyrus_scripts import PapyrusDataset, keep_protein_class, keep_quality, consume_chunks, keep_source
 
 from chembl_webresource_client.new_client import new_client
 
@@ -37,10 +36,10 @@ def retrieve_kinase_data_from_Papyrus(version : str = '05.7', plusplus : bool = 
 
     print('Retrieve kinase data from Papyrus...')
     data = (PapyrusDataset(version=version, plusplus=plusplus)
-        .keep_protein_class(classes=[{'l3': 'Protein Kinase'}])
-        .keep_quality(min_quality=min_quality)
-        .keep_activity_type(activity_types=['any'])
-        .keep_source(source=sources))
+            .keep_protein_class(classes=[{'l3': 'Protein Kinase'}])
+            .keep_quality(min_quality=min_quality)
+            .keep_activity_type(activity_types=['any'])
+            .keep_source(source=sources))
     all_kinase_data = data.consume_chunks(progress=True)
     print('Number of kinase targets: {}'.format(all_kinase_data.target_id.nunique()))
     print('Number of activity points before filtering: {}'.format(all_kinase_data.shape[0]))
@@ -325,7 +324,7 @@ def correct_relation(data): #, sources, pchem_vals):
 
 
 if __name__ == '__main__':
-    current_dir = Path(__file__).resolve().parent
+    current_dir = Path(__file__).resolve().parent.parent
     data_path = (current_dir / 'data/raw')
     Path(data_path).mkdir(parents=True, exist_ok=True)
 
@@ -344,7 +343,7 @@ if __name__ == '__main__':
     allosteric_kinase_data_fixed = correct_relation(allosteric_kinase_data)
     orthosteric_kinase_data_fixed = correct_relation(orthosteric_kinase_data)
     
-    orthosteric_kinase_data.to_csv((data_path / '04_orthosteric_kinase_data_corr_rel.csv.gz'), index=False)
-    allosteric_kinase_data.to_csv((data_path / '04_allosteric_kinase_data_corr_rel.csv.gz'), index=False)
+    orthosteric_kinase_data.to_csv((data_path / 'orthosteric_kinase_data_corr_rel.csv.gz'), index=False)
+    allosteric_kinase_data.to_csv((data_path / 'allosteric_kinase_data_corr_rel.csv.gz'), index=False)
 
 
