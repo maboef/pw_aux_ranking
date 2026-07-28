@@ -13,20 +13,16 @@ from typing import List
 from rdkit import Chem, DataStructs
 from rdkit.Chem import Descriptors, AllChem
 
-# from Bio import Entrez
-# from Bio.Entrez import efetch
-# Entrez.email = 'A.N.Other@example.com'
-
-from papyrus_scripts.reader import read_papyrus, read_protein_set
-from papyrus_scripts.preprocess import keep_protein_class, keep_quality, keep_type, consume_chunks, keep_source
+from papyrus_scripts import PapyrusDataset
+from papyrus_scripts.preprocess import keep_protein_class, keep_quality, keep_activity_type, consume_chunks, keep_source
 
 from chembl_webresource_client.new_client import new_client
 
 
-def retrieve_kinase_data_from_Papyrus(source_path : str, version : str = '05.7', plusplus : bool = False, min_quality : str = 'low', sources: str = 'any'):
+def retrieve_kinase_data_from_Papyrus(version : str = '05.7', plusplus : bool = False, min_quality : str = 'low', sources: str = 'any'):
 
     """
-    Filter kinase Ki and IC50 data from Papyrus v05.5
+    Gather kinase data from Papyrus v05.7
 
     Parameters
     ----------
@@ -40,21 +36,12 @@ def retrieve_kinase_data_from_Papyrus(source_path : str, version : str = '05.7',
     """
 
     print('Retrieve kinase data from Papyrus...')
-
-    if plusplus:
-        mol_data = read_papyrus(is3d=False, chunksize=100000, source_path=source_path, plusplus=plusplus, version=version)
-        protein_data = read_protein_set(source_path=source_path)
-        filter_protein = keep_protein_class(data=mol_data, protein_data=protein_data, classes=[{'l3': 'Protein Kinase'}])
-        filter_source = keep_source(data=filter_type, source=sources)
-        all_kinase_data = consume_chunks(filter_source, progress=True, total=5)
-    else:
-        mol_data = read_papyrus(is3d=False, chunksize=1000000, source_path=source_path, plusplus=plusplus, version=version)
-        protein_data = read_protein_set(source_path=source_path)
-        filter_quality = keep_quality(data=mol_data, min_quality=min_quality)
-        filter_protein = keep_protein_class(data=filter_quality, protein_data=protein_data, classes=[{'l3': 'Protein Kinase'}])
-        filter_type = keep_type(data=filter_protein, activity_types=['any'])
-        filter_source = keep_source(data=filter_type, source=sources)
-        all_kinase_data = consume_chunks(filter_source, progress=True, total=60)
+    data = (PapyrusDataset(version=version, plusplus=plusplus)
+        .keep_protein_class(classes=[{'l3': 'Protein Kinase'}])
+        .keep_quality(min_quality=min_quality)
+        .keep_activity_type(activity_types=['any'])
+        .keep_source(source=sources))
+    all_kinase_data = data.consume_chunks(progress=True)
     print('Number of kinase targets: {}'.format(all_kinase_data.target_id.nunique()))
     print('Number of activity points before filtering: {}'.format(all_kinase_data.shape[0]))
     return all_kinase_data
@@ -341,23 +328,22 @@ if __name__ == '__main__':
     current_dir = Path(__file__).resolve().parent
     data_path = (current_dir / 'data/raw')
     Path(data_path).mkdir(parents=True, exist_ok=True)
-    complete_papyrus_kinase_data = retrieve_kinase_data_from_Papyrus(source_path='/home/boefma/data', version='05.7', plusplus=False, min_quality='low')
-    complete_papyrus_kinase_data.to_csv((data_path / '01_raw_kinase_data.csv.gz'), index=False)
+
+    complete_papyrus_kinase_data = retrieve_kinase_data_from_Papyrus(version='05.7', plusplus=False, min_quality='low')
+    # complete_papyrus_kinase_data.to_csv((data_path / '01_raw_kinase_data.csv.gz'), index=False)
     complete_papyrus_kinase_data = complete_papyrus_kinase_data.drop(['Classification', 'pchembl_value_MAD', 'pchembl_value_Median', 'pchembl_value_N', 'pchembl_value_SEM', 'pchembl_value_StdDev', 'InChI_AuxInfo', 'InChI'], axis=1, errors='raise')
-    complete_papyrus_kinase_data.to_csv((data_path / '01_raw_kinase_data.csv.gz'), index=False)
+    # complete_papyrus_kinase_data.to_csv((data_path / '01_raw_kinase_data.csv.gz'), index=False)
     size_filtered_kinase_data = filter_data(complete_papyrus_kinase_data)
-    size_filtered_kinase_data.to_csv((data_path / '02_size_kinase_data.csv.gz'), index=False)
+    # size_filtered_kinase_data.to_csv((data_path / '02_size_kinase_data.csv.gz'), index=False)
     orthosteric_kinase_data, allosteric_kinase_data = filter_allosteric_compounds(size_filtered_kinase_data)
-    orthosteric_kinase_data.to_csv((data_path / '03_orthosteric_kinase_data.csv.gz'), index=False)
-    allosteric_kinase_data.to_csv((data_path / '03_allosteric_kinase_data.csv.gz'), index=False)
+    # orthosteric_kinase_data.to_csv((data_path / '03_orthosteric_kinase_data.csv.gz'), index=False)
+    # allosteric_kinase_data.to_csv((data_path / '03_allosteric_kinase_data.csv.gz'), index=False)
+    # orthosteric_kinase_data = pd.read_csv(data_path / '03_orthosteric_kinase_data.csv.gz')
+    # allosteric_kinase_data = pd.read_csv(data_path / '03_allosteric_kinase_data.csv.gz')
 
-    orthosteric_kinase_data = pd.read_csv(data_path / '03_orthosteric_kinase_data.csv.gz')
-    allosteric_kinase_data = pd.read_csv(data_path / '03_allosteric_kinase_data.csv.gz')
-
-    # sources = ['Merget2017', 'Christmann2016', 'Christmann2016;Merget2017', 'Merget2017;Christmann2016'] # 'ExCAPE-DB'
-    # pchem_vals = [3.523, 5.00, 5.10, 5.20, 5.40, 5.80, 5.50, 5.70, 5.30, 5.60, 6.00] 
-    allosteric_kinase_data_fixed = correct_relation(allosteric_kinase_data) #, pchem_vals=pchem_vals, sources=sources)
-    orthosteric_kinase_data_fixed = correct_relation(orthosteric_kinase_data) #, pchem_vals=pchem_vals, sources=sources)
+    allosteric_kinase_data_fixed = correct_relation(allosteric_kinase_data)
+    orthosteric_kinase_data_fixed = correct_relation(orthosteric_kinase_data)
+    
     orthosteric_kinase_data.to_csv((data_path / '04_orthosteric_kinase_data_corr_rel.csv.gz'), index=False)
     allosteric_kinase_data.to_csv((data_path / '04_allosteric_kinase_data_corr_rel.csv.gz'), index=False)
 

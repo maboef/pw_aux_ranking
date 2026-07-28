@@ -1,4 +1,4 @@
-\*.ipynb
+*.ipynb
 *.csv
 *.png
 *.txt
@@ -9,6 +9,7 @@
 *.fasta
 */scaler
 *.ipynb
+private_run_pw_ranked_chemprop.py
 
 .ipynb_checkpoints/
 checkpoints/
