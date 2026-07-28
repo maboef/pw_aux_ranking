@@ -71,7 +71,8 @@ def run_model(
     """
     # If param_path is given, set params to HyperOpt istaed of the name of the method
     # Create paths
-    extension_ = extension + str('_loss_plot')
+    epochs = 1000
+    extension_ = extension + str('long')
     model_path = (current_dir / 'models'/ extension_)
     Path(model_path).mkdir(parents=True, exist_ok=True)
     data_path = dataset_dir / extension
@@ -138,4 +139,4 @@ if __name__ == '__main__':
     current_dir = Path(__file__).resolve().parent
     for seed in range(1):
         seed = seed+1
-        run_model(dataset_dir=current_dir / 'data/datasets/', current_dir=current_dir, protein_descriptor='Z-scales', extension='cluster_split_ext_rank_cont_set', seed=seed) 
+        run_model(dataset_dir=current_dir / 'data/datasets/', current_dir=current_dir, protein_descriptor='Z-scales', extension='cluster_split_ext_rank_cont_bin_set', seed=seed) 
