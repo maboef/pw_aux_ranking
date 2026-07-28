@@ -58,11 +58,3 @@ if __name__ == '__main__':
     cluster_split = dissimilaritydrive_global_balanced_cluster_split(regression_data_pivot, targets, [80, 10, 10])
     cluster_split.to_csv(data_path / 'pivotted_kinase_data_cluster_split.csv', index=False)
 
-    '''
-    regression_data['rank_split'] = np.nan
-    regression_data[['Activity_ID', 'Quality', 'source', 'SMILES', 'target_id', 'accession', 'fixed_relation', 'pchembl_value_Mean']]
-    cluster_base = pd.merge(regression_data, cluster_split[['SMILES', 'Subset']], on='SMILES')
-    random_base = pd.merge(regression_data, random_split[['SMILES', 'Subset']], on='SMILES')
-    cluster_base.to_csv(current_dir / 'data/datasets/cluster_split_base_set.csv', index=False)
-    random_base.to_csv(current_dir / 'data/datasets/random_split_base_set.csv', index=False)
-    '''
