@@ -71,9 +71,7 @@ def run_model(
     """
     # If param_path is given, set params to HyperOpt istaed of the name of the method
     # Create paths
-    epochs = 1000
-    extension_ = extension + str('long')
-    model_path = (current_dir / 'models'/ extension_)
+    model_path = (current_dir / 'models'/ extension)
     Path(model_path).mkdir(parents=True, exist_ok=True)
     data_path = dataset_dir / extension
     data_path = data_path.with_suffix('.csv')
@@ -93,7 +91,7 @@ def run_model(
     train = train.reset_index(drop=True)
     train_size = len(train)
     valid = data[data['subset'] == 'valid']
-    valid = valid[valid['fixed_relation'] == '='] # ensure none of the censored data is used for
+    valid = valid[valid['fixed_relation'] == '='] # ensure none of the censored data is used for validation
     valid = valid.reset_index(drop=True)
     valid_size = len(valid)
     test = data[data['subset'] == 'test']
@@ -137,6 +135,6 @@ def run_model(
 
 if __name__ == '__main__':
     current_dir = Path(__file__).resolve().parent
-    for seed in range(1):
+    for seed in range(10):
         seed = seed+1
-        run_model(dataset_dir=current_dir / 'data/datasets/', current_dir=current_dir, protein_descriptor='Z-scales', extension='cluster_split_ext_rank_cont_bin_set', seed=seed) 
+        run_model(dataset_dir=current_dir / 'data/datasets/', current_dir=current_dir, protein_descriptor='Z-scales', extension='cluster_split_ext_rank_cont', seed=seed) 

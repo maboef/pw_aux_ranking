@@ -138,19 +138,6 @@ def find_model_path(base_path, split, seed):
 if __name__ == '__main__':
     current_dir = pathlib.Path(__file__).resolve().parent
     
-    '''
-    censored_test = pd.read_csv(current_dir / 'data/datasets/cluster_split_base_set.csv')
-    censored_test = censored_test[censored_test['Subset'].isin(['test', 'valid'])]
-    censored_test = censored_test[censored_test['fixed_relation'] != '=']
-    censored_test['value'] = censored_test['pchembl_value_Mean']
-    
-    random_test = pd.read_csv(current_dir / 'data/datasets/random_split_base_set.csv')
-    random_test = random_test[random_test['Subset'] == 'test']
-    random_test = random_test[random_test['fixed_relation'] == '=']
-    random_test['value'] = random_test['pchembl_value_Mean']
-    '''
-    
-    
     cluster_test = pd.read_csv(current_dir / 'data/datasets/cluster_split_base_set.csv')
     cluster_test = cluster_test[cluster_test['Subset'] == 'test']
     cluster_test = cluster_test[cluster_test['relation'] == '=']
@@ -174,7 +161,6 @@ if __name__ == '__main__':
     base_path = '/home/boefma/publication_pw_aux_rank/pw_aux_rank/models/'
     
     '''
-    
     split = 'cluster_split_base_set/'
     models = [# '1/best-51-val_rmse.pt',
               # '2/best-58-val_rmse.pt',
@@ -246,30 +232,16 @@ if __name__ == '__main__':
             '8/best-70-val_rmse.pt',
             '9/best-65-val_rmse.pt',
             ]     
-    
-    '''
-    split = 'cluster_split_ext_rank_cont_bin_setlong/'
-    models = ['1/best-425-val_rmse.pt',
-             ]
-    '''
+
     
     for model in models:
         model_path = os.path.join(base_path, split, model)
         prot_scaler_path = os.path.join(base_path, split)
         y_scaler_path = os.path.join(base_path, split, 'target_scaler.csv')
         model_dir = pathlib.Path(model_path).parent
-
-        '''
-        random_preds = generate_preds([model_path], prot_scaler_path, random_test, y_scaler_path)
-        print(f'random split test - RMSE, R2, Spearman R: {get_performance(random_preds.value, random_preds.unscaled_prediction)}')
-        random_preds.to_csv(f'{model_dir}/random_test_preds.csv', index=False)
-        '''
         
         cluster_preds = generate_preds([model_path], prot_scaler_path, cluster_test, y_scaler_path)
         cluster_preds.to_csv(f'{model_dir}/cluster_test_preds.csv', index=False)
-
-        random_train_preds = generate_preds([model_path], prot_scaler_path, random_train, y_scaler_path)
-        random_train_preds.to_csv(f'{model_dir}/random_train_preds.csv', index=False)
         
         saifudeen_test_preds = generate_preds([model_path], prot_scaler_path, saifudeen_test, y_scaler_path)
         saifudeen_test_preds = saifudeen_test_preds[saifudeen_test_preds['prediction_0'] != saifudeen_test_preds['unscaled_prediction']]
@@ -277,12 +249,7 @@ if __name__ == '__main__':
         
         print(f'cluster split test - RMSE, R2, Spearman R: {get_performance(cluster_preds.value, cluster_preds.unscaled_prediction)}')
         print(f'saifudeen test set - RMSE, R2, Spearman R: {get_performance(saifudeen_test_preds.value, saifudeen_test_preds.unscaled_prediction)}')
-
         
         saifudeen_train_preds = generate_preds([model_path], prot_scaler_path, saifudeen_train, y_scaler_path)
         saifudeen_train_preds = saifudeen_train_preds[saifudeen_train_preds['prediction_0'] != saifudeen_train_preds['unscaled_prediction']]
         saifudeen_train_preds.to_csv(f'{model_dir}/saifudeen_train_preds.csv', index=False)
-        '''
-        censored_test_preds = generate_preds([model_path], prot_scaler_path, censored_test, y_scaler_path)
-        censored_test_preds.to_csv(f'{model_dir}/censored_test_preds.csv', index=False)
-        '''
