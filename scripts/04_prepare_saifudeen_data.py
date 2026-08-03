@@ -112,17 +112,18 @@ def fit_curves(dose_curve_data):
 
 
 if __name__ == '__main__':
+    current_dir = Path(__file__).resolve().parent.parent
     
-    pct_inhibition_data = pd.read_csv('data/saifudeen_2026_raw/raw_percent_inhibition_full_set.csv')
-    dose_curve_data = pd.read_csv('data/saifudeen_2026_raw/raw_dose_curves_full_set.csv')
-    compound_mapping = pd.read_csv('data/saifudeen_2026_raw/name_SMILES_compound_mapping.csv')
-    target_mapping = pd.read_csv('data/saifudeen_2026_raw/kinase_uniprot_target_mapping.csv')
+    pct_inhibition_data = pd.read_csv(current_dir / 'data/saifudeen_2026_raw/raw_percent_inhibition_full_set.csv')
+    dose_curve_data = pd.read_csv(current_dir / 'data/saifudeen_2026_raw/raw_dose_curves_full_set.csv')
+    compound_mapping = pd.read_csv(current_dir / 'data/saifudeen_2026_raw/name_SMILES_compound_mapping.csv')
+    target_mapping = pd.read_csv(current_dir / 'data/saifudeen_2026_raw/kinase_uniprot_target_mapping.csv')
     
     pct_inhibition_melt = prep_percent_inhibition(pct_inhibition_data)
     pct_inhibition_melt = pd.merge(pct_inhibition_melt, target_mapping[['Entry', 'Gene names (primary)']], left_on='gene_name', right_on='Gene names (primary)')
     pct_inhibition_melt = pd.merge(pct_inhibition_melt, compound_mapping[['InChiKey', 'drug_code', 'drug_name', 'SMILES']], left_on='Name', right_on='drug_name')
     pct_inhibition_melt['activity_id'] = pct_inhibition_melt['drug_name'] + '_on_' + pct_inhibition_melt['Entry']
-    pct_inhibition_melt.to_csv('data/datasets/saifudeen_percent_inhibition_data.csv', index=False)
+    pct_inhibition_melt.to_csv(current_dir / 'data/datasets/saifudeen_percent_inhibition_data.csv', index=False)
 
     dose_curve_melt = prep_dose_curve(dose_curve_data)
     dose_curve_melt = pd.merge(dose_curve_melt, target_mapping[['Entry', 'Gene names (primary)']], left_on='gene_name', right_on='Gene names (primary)')
@@ -132,7 +133,7 @@ if __name__ == '__main__':
     ec50s['activity_id'] = ec50s['Inhibitor'] + '_on_' + ec50s['Uniprot ID']
     dose_curve_melt = dose_curve_melt[['Name', 'Entry', 'gene_name', 'activity_id', 'InChiKey', 'drug_code', 'drug_name', 'SMILES']].drop_duplicates()
     dose_curve_melt = pd.merge(dose_curve_melt, ec50s[['EC50 (uM)', 'Hillslope', 'pEC50', 'activity_id']], on='activity_id')
-    dose_curve_melt.to_csv('data/datasets/saifudeen_pec50_data.csv', index=False)
+    dose_curve_melt.to_csv(current_dir / 'data/datasets/saifudeen_pec50_data.csv', index=False)
     
     
 

@@ -1,15 +1,5 @@
-"""
-Extract specific sheets, columns, and rows from a multi-sheet .xlsx file
-into separate CSV files.
-
-Fill in the CONFIG section below, then run:
-    python extract_sheets_to_csv.py
-"""
-
 import pandas as pd
-
-
-SOURCE_FILE = "Saifudeen_2026_raw.xlsx"
+from pathlib import Path
 
 # One entry per sheet you want to extract.
 # - sheet:       sheet name (or integer index, e.g. 0 for the first sheet)
@@ -96,10 +86,16 @@ def extract(source_file: str, spec: dict) -> pd.DataFrame:
 
 
 def main():
+    SOURCE_FILE = "Saifudeen_2026_raw.xlsx"
+    
+    current_dir = Path(__file__).resolve().parent.parent
+    data_path = (current_dir / 'data/saifudeen_2026_raw')
+    SOURCE_FILE = data_path / SOURCE_FILE
+    
     for spec in EXTRACTIONS:
         df = extract(SOURCE_FILE, spec)
-        df.to_csv(spec["output_csv"], index=False)
-        print(f"Wrote {len(df)} rows x {len(df.columns)} cols -> {spec['output_csv']}")
+        df.to_csv(data_path / spec["output_csv"], index=False)
+        print(f"Wrote {len(df)} rows x {len(df.columns)} cols -> {data_path / spec['output_csv']}")
 
     for merge_spec in MERGES:
         left_df = extract(SOURCE_FILE, merge_spec["left"])
@@ -114,10 +110,10 @@ def main():
             suffixes=merge_spec.get("suffixes", ("_left", "_right")),
         )
 
-        merged.to_csv(merge_spec["output_csv"], index=False)
+        merged.to_csv(data_path / merge_spec["output_csv"], index=False)
         print(
             f"Merged -> {len(merged)} rows x {len(merged.columns)} cols "
-            f"-> {merge_spec['output_csv']}"
+            f"-> {data_path / merge_spec['output_csv']}"
         )
 
 

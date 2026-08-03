@@ -63,8 +63,9 @@ def merge_sets(base_data, saifudeen_data):
 
 
 if __name__ == '__main__':
-    current_dir = Path(__file__).resolve().parent
+    current_dir = Path(__file__).resolve().parent.parent
     data_path = (current_dir / 'data/raw')
+    Path(data_path).mkdir(parents=True, exist_ok=True)
 
     random_split = pd.read_csv(data_path / 'pivotted_kinase_data_random_split.csv')
     cluster_split = pd.read_csv(data_path / 'pivotted_kinase_data_cluster_split.csv')
@@ -85,11 +86,11 @@ if __name__ == '__main__':
     # inclusion of rank_split column
     cluster_rank = standardize_base(cluster_base)
     random_rank = standardize_base(random_base)
-    cluster_rank.to_csv('data/datasets/cluster_split_base_rank_set.csv', index=False)
-    random_rank.to_csv('data/datasets/random_split_base_rank_set.csv', index=False)
+    cluster_rank.to_csv(current_dir / 'data/datasets/cluster_split_base_rank_set.csv', index=False)
+    random_rank.to_csv(current_dir / 'data/datasets/random_split_base_rank_set.csv', index=False)
 
     # gather saifudeen percent inhibition data and merge with base data
-    pct_inh_saifudeen_data = pd.read_csv('data/datasets/saifudeen_percent_inhibition_data.csv')
+    pct_inh_saifudeen_data = pd.read_csv(current_dir / 'data/datasets/saifudeen_percent_inhibition_data.csv')
     compounds = pd.DataFrame({'SMILES':pct_inh_saifudeen_data['SMILES'].unique(), 'drug_name':pct_inh_saifudeen_data['drug_name'].unique()})
     smiles, inchikeys = standardize_compounds(compounds.SMILES)
     compounds['SMILES'] = smiles
@@ -103,8 +104,8 @@ if __name__ == '__main__':
     cluster_merged = merge_sets(cluster_rank, pct_inh_saifudeen_data)
     random_merged = merge_sets(random_rank, pct_inh_saifudeen_data)
 
-    cluster_merged.to_csv('data/datasets/cluster_split_ext_rank_set.csv', index=False)
-    random_merged.to_csv('data/datasets/random_split_ext_rank_set.csv', index=False)
+    cluster_merged.to_csv(current_dir / 'data/datasets/cluster_split_ext_rank_set.csv', index=False)
+    random_merged.to_csv(current_dir / 'data/datasets/random_split_ext_rank_set.csv', index=False)
     
     cluster_merged['rank_pchembl_value_Mean'] = cluster_merged['pchembl_value_Mean'] 
     cluster_merged['rank_percent_inhibition'] = cluster_merged['percent_inhibition'] 
@@ -112,8 +113,8 @@ if __name__ == '__main__':
     random_merged['rank_pchembl_value_Mean'] = random_merged['pchembl_value_Mean'] 
     random_merged['rank_percent_inhibition'] = random_merged['percent_inhibition'] 
     
-    cluster_merged.to_csv('data/datasets/cluster_split_ext_rank_cont_set.csv', index=False)
-    random_merged.to_csv('data/datasets/random_split_ext_rank_cont_set.csv', index=False)
+    cluster_merged.to_csv(current_dir / 'data/datasets/cluster_split_ext_rank_cont_set.csv', index=False)
+    random_merged.to_csv(current_dir / 'data/datasets/random_split_ext_rank_cont_set.csv', index=False)
 
 
 
