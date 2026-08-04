@@ -15,3 +15,13 @@ Repo for the work on Pairwise Auxiliary Ranking Loss for Bioactivity modelling -
 
 Needs Python version >=3.11 - then install using the requirements.txt file.
 
+
+## Generating of datasets
+
+```
+clone the repo
+
+cd pw_aux_ranking
+
+$>make -f run_data_scripts.make
+```
