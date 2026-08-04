@@ -1,5 +1,5 @@
 beautifulsoup4==4.15.0
-Bio==1.8.3
+biopython==1.83
 chembl_webresource_client==0.10.9
 chemprop==2.3.0
 joblib==1.4.2
