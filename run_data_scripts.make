@@ -12,7 +12,7 @@ data/raw/pivotted_kinase_data_cluster_split.csv:
 	pip install -e .
 	python scripts/02_prepare_splits.py
 
-data/protein_descriptors/kinase_domain_sequences.fasta:
+protein_descriptors/kinase_domain_sequences.fasta:
 	python scripts/03_prepare_protein_descriptors.py
 
 data/datasets/saifudeen_percent_inhibition_data.csv:

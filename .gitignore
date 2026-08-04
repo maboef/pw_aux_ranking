@@ -9,6 +9,7 @@
 *.fasta
 */scaler
 *.ipynb
+*.egg-info
 private_run_pw_ranked_chemprop.py
 
 .ipynb_checkpoints/

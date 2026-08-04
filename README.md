@@ -22,10 +22,10 @@ pip install -r requirements.txt
 
 ## Generating of datasets
 
-```
 clone the repo
 
+```
 cd pw_aux_ranking
 
-$>make -f run_data_scripts.make
+make -f run_data_scripts.make
 ```
