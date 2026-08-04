@@ -29,7 +29,7 @@ def filter_targets(data, min_datapoints=200):
 
 
 if __name__ == '__main__':
-    current_dir = Path(__file__).resolve().parent
+    current_dir = Path(__file__).resolve().parent.parent
     data_path = (current_dir / 'data/raw')
 
     orthosteric_kinase_data = pd.read_csv(data_path / 'orthosteric_kinase_data_corr_rel.csv.gz') 

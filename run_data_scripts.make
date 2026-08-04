@@ -9,6 +9,7 @@ data/raw/orthosteric_kinase_data_corr_rel.csv.gz:
 	python scripts/01_prepare_base_data.py
 
 data/raw/pivotted_kinase_data_cluster_split.csv:
+	pip install -e .
 	python scripts/02_prepare_splits.py
 
 data/protein_descriptors/kinase_domain_sequences.fasta:
