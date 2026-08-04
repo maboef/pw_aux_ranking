@@ -137,4 +137,4 @@ if __name__ == '__main__':
     current_dir = Path(__file__).resolve().parent
     for seed in range(10):
         seed = seed+1
-        run_model(dataset_dir=current_dir / 'data/datasets/', current_dir=current_dir, protein_descriptor='Z-scales', extension='cluster_split_ext_rank_cont', seed=seed) 
+        run_model(dataset_dir=current_dir / 'data/datasets/', current_dir=current_dir, protein_descriptor='Z-scales', extension='cluster_split_ext_rank_cont_set', seed=seed) 
