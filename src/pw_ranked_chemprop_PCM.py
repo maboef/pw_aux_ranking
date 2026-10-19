@@ -21,7 +21,7 @@ import torch
 torch.set_float32_matmul_precision("high")
 
 
-def train_auxiliary_chemprop_PCM(train, valid, model_path: str,  **kwargs):
+def train_auxiliary_chemprop(train, valid, model_path: str,  **kwargs):
     """
     Train a chemprop model for the whole dataset (v2.1.2 style).
     """
@@ -40,25 +40,13 @@ def train_auxiliary_chemprop_PCM(train, valid, model_path: str,  **kwargs):
     
     smis = dataset.loc[:, 'SMILES'].values
     ys = dataset.loc[:, 'value'].values
-    prots = dataset.loc[:, 'protein_descriptor'].values
+    prots = np.expand_dims(np.zeros_like(smis), axis=1)
+    prots = np.asarray(prots, dtype=float)
+    print(f'prots {prots}')
     lt_mask = np.expand_dims(np.array(dataset['fixed_relation'].str.contains('<').values), axis=1)
     gt_mask = np.expand_dims(np.array(dataset['fixed_relation'].str.contains('>').values), axis=1)
     
-    if 'rank_split' and 'rank_pchembl_value_Mean' and 'rank_percent_inhibition' in dataset:
-        aux_mask = dataset[['rank_split', 'rank_pchembl_value_Mean', 'rank_percent_inhibition']].to_numpy()
-        print(f'aux_mask unique: {aux_mask.shape}')
-    elif 'rank_split' in dataset:
-        dataset['rank_percent_inhibition'] = np.nan
-        dataset['rank_pchembl_value_Mean'] = np.nan
-        aux_mask = dataset[['rank_split', 'rank_pchembl_value_Mean', 'rank_percent_inhibition']].to_numpy()
-        print(f'aux_mask unique: {aux_mask.shape}')
-    else:
-        print(dataset['rank_split'])
-        print(dataset['rank_pchembl_value_Mean'])
-        print('no rank split column found')
-        aux_mask = np.expand_dims(np.ones(len(ys)), axis=1)
-
-    
+    aux_mask = dataset[['pchembl_value_Mean', 'abs_percent_inhibition']].to_numpy()
     mols = [utils.make_mol(smi, keep_h=False, add_h=False) for smi in smis]
     datapoints = [MoleculeDatapoint(mol=mol, y=[float(y)], x_d=prot, lt_mask=lt, gt_mask=gt, aux_mask=aux) 
                   for mol, y, prot, lt, gt, aux in zip(mols, ys, prots, lt_mask, gt_mask, aux_mask)] # using the pre-existing weight value for storing and use of target indices as it's anyway passed along all through chemprop to the loss function
@@ -68,7 +56,7 @@ def train_auxiliary_chemprop_PCM(train, valid, model_path: str,  **kwargs):
     train_dset = CustomMoleculeDataset(train_data[0][0], featurizer)
     val_dset = CustomMoleculeDataset(val_data[0][0], featurizer)
     print(f'length train_dset {len(train_dset)}')
-    train_loader = custom_build_dataloader(train_dset, batch_size=batch_size, shuffle=True, class_balance=False, drop_last=True, seed=params['seed'])
+    train_loader = custom_build_dataloader(train_dset, batch_size=batch_size, shuffle=True, class_balance=True, drop_last=True, seed=params['seed'])
     val_loader = custom_build_dataloader(val_dset, batch_size=batch_size, shuffle=False, class_balance=False)
     
     mp = nn.BondMessagePassing(d_h=params['hidden_size'], # hidden size (v1: hidden_size=300)
@@ -85,9 +73,7 @@ def train_auxiliary_chemprop_PCM(train, valid, model_path: str,  **kwargs):
                             n_layers=params['ffn_num_layers'],
                             dropout=params['dropout'],
                             activation=params['activation'],
-                            criterion=MSEPlusPairwiseRankingLoss(rank_margin_1=params['rank_margin_1'],
-                                                                 rank_margin_2=params['rank_margin_2'],
-                                                                 categorical_dist=params['categorical_dist']))
+                            criterion=MSEPlusPairwiseRankingLoss(params['ranking_rules']))
 
     if params['aggregation'] == 'mean':
         agg = nn.MeanAggregation()
@@ -103,21 +89,3 @@ def train_auxiliary_chemprop_PCM(train, valid, model_path: str,  **kwargs):
         mode='min')])
     trainer.fit(chemprop_model, train_loader, val_loader)
     return trainer, chemprop_model
-
-
-def predict_chemprop_PCM(dataset, model_path: str):
-    model = CustomMPNN.load_from_checkpoint(model_path)
-    smis = dataset.loc[:, 'SMILES'].values
-    prots = dataset.loc[:, 'protein_descriptor'].values
-    mols = [utils.make_mol(smi, keep_h=False, add_h=False) for smi in smis]
-    datapoints = [data.MoleculeDatapoint(mol=mol, x_d=prot) for mol, prot in zip(mols, prots)]
-    featurizer = featurizers.SimpleMoleculeMolGraphFeaturizer()
-    test_dset = data.MoleculeDataset(datapoints, featurizer)
-    test_loader = data.build_dataloader(test_dset, batch_size=50, shuffle=False)
-    with torch.inference_mode():
-        trainer = pl.Trainer(
-            logger=None,
-            enable_progress_bar=True,
-            accelerator="gpu",
-            devices=1)
-    test_preds = trainer.predict(model, test_loader)

@@ -1,10 +1,60 @@
 
 import torch
+import operator
+
+from typing import Tuple
+from dataclasses import dataclass
+from torch.nn import functional as F
 from chemprop.nn import metrics, BoundedMSE
 from lightning.pytorch.core.mixins import HyperparametersMixin
-from torch.nn import functional as F
 
 import logging
+
+_OPS = {"<": operator.lt, "<=": operator.le, ">": operator.gt, ">=": operator.ge}
+
+
+@dataclass(frozen=True)
+class Cond:
+    target: int
+    op: str                      # "<", "<=", ">", ">=", "isnan", "notnan"
+    value: float = float("nan")  # unused for isnan / notnan
+    or_nan: bool = False         # if True, a missing value also satisfies the condition
+
+@dataclass(frozen=True)
+class CrossRule:
+    winner: Tuple[Cond, ...] 
+    loser: Tuple[Cond, ...]  
+
+@dataclass(frozen=True)
+class Level:
+    target: int
+    margin: float
+    higher_wins: bool = True
+
+@dataclass(frozen=True)
+class RankRuleConfig:
+    levels: Tuple[Level, ...] = ()          # priority order, first = highest
+    cross_rules: Tuple[CrossRule, ...] = ()
+    hierarchical: bool = True               # True: first level where both samples have a value decides
+                                            # False: every level votes independently, any "too close" vetoes
+    cross_rules_respect_veto: bool = False
+
+def _group_flag(T, conds):
+    flag = torch.ones(T.size(0), dtype=torch.bool, device=T.device)
+    for c in conds:
+        col = T[:, c.target]
+        nan = torch.isnan(col)
+        if c.op == "isnan":
+            m = nan
+        elif c.op == "notnan":
+            m = ~nan
+        else:
+            m = _OPS[c.op](col, c.value)      # NaN -> False
+            if c.or_nan:
+                m = m | nan                   # "value satisfies the condition OR is missing"
+        flag &= m
+    return flag
+
 
 def ce_loss(logits, targets, reduction="none"):
     """
@@ -27,15 +77,48 @@ def ce_loss(logits, targets, reduction="none"):
         log_pred = F.log_softmax(logits, dim=-1)
         return F.nll_loss(log_pred, targets, reduction=reduction)
 
+
 class MSEPlusPairwiseRankingLoss(metrics.ChempropMetric):
-    def __init__(self, rank_margin_1, rank_margin_2, categorical_dist):
+    def __init__(self, cfg):
         super().__init__()
         self.bounded_mse = BoundedMSE()
         self.ce_loss = torch.nn.BCEWithLogitsLoss(reduce='mean')
         self.alias = 'combined_regression_rank_loss'
-        self.rank_margin_1 = rank_margin_1
-        self.rank_margin_2 = rank_margin_2
-        self.categorical_dist = categorical_dist
+        self.cfg = cfg
+    
+    def build_pair_mask(self, T, cfg):
+        """T: [B, num_targets] with NaN for missing. Returns [B, B], mask[i, j] = i should outrank j."""
+        B = T.size(0)
+        dev = T.device
+        level_mask = torch.zeros(B, B, dtype=torch.bool, device=dev)
+        veto = torch.zeros(B, B, dtype=torch.bool, device=dev)
+        undecided = torch.ones(B, B, dtype=torch.bool, device=dev)
+    
+        for lvl in cfg.levels:                       # loop over levels, not pairs
+            v = T[:, lvl.target]
+            has = ~torch.isnan(v)
+            both = has.unsqueeze(1) & has.unsqueeze(0)
+            d = v.unsqueeze(1) - v.unsqueeze(0)
+            if not lvl.higher_wins:
+                d = -d
+    
+            active = both & undecided if cfg.hierarchical else both
+            level_mask |= active & (d > lvl.margin)
+            veto |= active & (d.abs() <= lvl.margin)
+            if cfg.hierarchical:
+                undecided &= ~both                   # lower levels only see pairs this one couldn't judge
+    
+        cross = torch.zeros_like(level_mask)
+        for r in cfg.cross_rules:                    # loop over rules, not pairs
+            w = _group_flag(T, r.winner)
+            l = _group_flag(T, r.loser)
+            cross |= w.unsqueeze(1) & l.unsqueeze(0)
+    
+        if cfg.cross_rules_respect_veto:
+            cross &= ~veto
+    
+        mask = (level_mask & ~veto) | cross
+        return mask & ~mask.T                        # drop contradictory pairs
     
     def compute_generalized_pair_loss(self, logits_arc, rank_split):
         if logits_arc.dim() > 1 and logits_arc.size(-1) > 1:
@@ -43,48 +126,20 @@ class MSEPlusPairwiseRankingLoss(metrics.ChempropMetric):
             scores = logits_arc[:, 1] - logits_arc[:, 0]
         else:
             scores = logits_arc.view(-1)
-            
-        # --- BROADCASTED PAIRWISE DIFFERENCES ---
-        # score_diffs[i, j] = Score_i - Score_j (Shape: [Batch, Batch])
         score_diffs = scores.unsqueeze(1) - scores.unsqueeze(0)
         
-        x = rank_split[:, 0]
-        y = rank_split[:, 1]
-        z = rank_split[:, 2]
-        
-        has_y = ~torch.isnan(y)
-        has_z = ~torch.isnan(z)
-        
-        # --- BROADCASTED VALUE DIFFERENCES ---
-        x_diffs = x.unsqueeze(1) - x.unsqueeze(0)
-        y_diffs = y.unsqueeze(1) - y.unsqueeze(0)
-        z_diffs = z.unsqueeze(1) - z.unsqueeze(0)
-        
-        both_have_y = has_y.unsqueeze(1) & has_y.unsqueeze(0)
-        both_have_z = has_z.unsqueeze(1) & has_z.unsqueeze(0)
-        
-        # Which rank level is actually being used?
-        using_z = both_have_z
-        using_y = both_have_y & ~both_have_z
-        using_x = ~(using_y | using_z)
-        
-        pair_mask = (
-            (using_x & (x_diffs > self.categorical_dist)) |
-            (using_y & (y_diffs > self.rank_margin_1)) |
-            (using_z & (z_diffs > self.rank_margin_2)))
+        pair_mask = self.build_pair_mask(rank_split, self.cfg)
         if not pair_mask.any():
             return torch.tensor(0.0, device=logits_arc.device, requires_grad=True)
-        
-        # Extract valid differences
+    
         valid_diffs = score_diffs[pair_mask]
-        # --- CROSS ENTROPY LOSS CALCULATION ---
+        
         logits_pair = torch.stack([torch.zeros_like(valid_diffs), valid_diffs], dim=1)
         targets_ranking = torch.tensor([0.0, 1.0], device=valid_diffs.device).expand(len(valid_diffs), 2)
         
         ce_loss = torch.nn.BCEWithLogitsLoss(reduce='mean')
         loss = self.ce_loss(logits_pair, targets_ranking)
         return loss
-
 
     def _calc_unreduced_loss(self, preds, targets, logits_mat, logits_arc, 
                              targets_mat, weights=None, lt_mask=None, gt_mask=None,
