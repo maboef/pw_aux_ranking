@@ -36,18 +36,18 @@ def create_apply_scaler(prot, model_path):
 
 cfg = RankRuleConfig(
     levels=(
-        Level(target=0, margin=1.0), # pchembl_value
-        Level(target=1, margin=10.0), # abs_percent_inhibition
+        Level(target=0, margin=0.8), # pchembl_value
+        Level(target=1, margin=20.0), # abs_percent_inhibition
     ),
     
     cross_rules=(
         CrossRule(winner=(Cond(0, ">", 7.0), Cond(1, "isnan")),
                   loser=(Cond(1, "<", 50),)),
         CrossRule(winner=(Cond(1, ">", 50), Cond(0, "isnan")),
-                  loser=(Cond(0, "<", 5.5),))
+                  loser=(Cond(0, "<", 5.5),)),
         CrossRule(winner=(Cond(1, ">", 100), Cond(0, "isnan")),
-                  loser=(Cond(0, "<", 6.0),))
-    ),
+                  loser=(Cond(0, "<", 6.0),)),
+        ),
     cross_rules_respect_veto=False
 )
 
@@ -96,7 +96,7 @@ def run_model(
     
     # prot_descriptor_path = dataset_dir / f'{protein_descriptor}_protein_descriptors.pkl'
     
-    for fold_num in range(4, 5):
+    for fold_num in range(0, 5):
         model_path = (current_dir / 'models'/ extension)
         data_path = dataset_dir / extension
         data_path = data_path.with_suffix('.parquet')
@@ -158,6 +158,6 @@ if __name__ == '__main__':
     current_dir = Path(__file__).resolve().parent
 
     for seed in range(1):
-        seed = seed+1
+        seed = seed+3
         run_model(dataset_dir=Path('/home/boefma/oncode_accelerator/avoidome/hERG_modelling/datasets/'), current_dir=current_dir, extension='proteono_folds_clustersplit_extend', seed=seed)
  

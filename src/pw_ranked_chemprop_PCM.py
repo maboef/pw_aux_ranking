@@ -49,7 +49,8 @@ def train_auxiliary_chemprop(train, valid, model_path: str,  **kwargs):
     aux_mask = dataset[['pchembl_value_Mean', 'abs_percent_inhibition']].to_numpy()
     mols = [utils.make_mol(smi, keep_h=False, add_h=False) for smi in smis]
     datapoints = [MoleculeDatapoint(mol=mol, y=[float(y)], x_d=prot, lt_mask=lt, gt_mask=gt, aux_mask=aux) 
-                  for mol, y, prot, lt, gt, aux in zip(mols, ys, prots, lt_mask, gt_mask, aux_mask)] # using the pre-existing weight value for storing and use of target indices as it's anyway passed along all through chemprop to the loss function
+                  for mol, y, prot, lt, gt, aux in zip(mols, ys, prots, lt_mask, gt_mask, aux_mask)]
+    
     train_data, val_data, test_data = split_data_by_indices([datapoints], *split_indices)
     featurizer = SimpleMoleculeMolGraphFeaturizer()
     

@@ -119,7 +119,21 @@ class MSEPlusPairwiseRankingLoss(metrics.ChempropMetric):
     
         mask = (level_mask & ~veto) | cross
         return mask & ~mask.T                        # drop contradictory pairs
+
+    def to_score(self, logits):
+        if logits.dim() > 1 and logits.size(-1) > 1:
+            return logits[:, 1] - logits[:, 0]
+        return logits.view(-1)
     
+    def compute_generalized_pair_loss(self, logits_arc, rank_split):
+        scores = self.to_score(logits_arc)
+        pair_mask = self.build_pair_mask(rank_split, self.cfg)  # [i, j]: i should rank above j
+        if not pair_mask.any():
+            return scores.sum() * 0.0
+        diffs = (scores.unsqueeze(1) - scores.unsqueeze(0))[pair_mask]
+        return F.softplus(-diffs).mean()
+
+    '''
     def compute_generalized_pair_loss(self, logits_arc, rank_split):
         if logits_arc.dim() > 1 and logits_arc.size(-1) > 1:
             # Logistic difference for binary classification logits
@@ -137,10 +151,10 @@ class MSEPlusPairwiseRankingLoss(metrics.ChempropMetric):
         logits_pair = torch.stack([torch.zeros_like(valid_diffs), valid_diffs], dim=1)
         targets_ranking = torch.tensor([0.0, 1.0], device=valid_diffs.device).expand(len(valid_diffs), 2)
         
-        ce_loss = torch.nn.BCEWithLogitsLoss(reduce='mean')
         loss = self.ce_loss(logits_pair, targets_ranking)
         return loss
-
+    '''
+    
     def _calc_unreduced_loss(self, preds, targets, logits_mat, logits_arc, 
                              targets_mat, weights=None, lt_mask=None, gt_mask=None,
                              rank_split=None):
